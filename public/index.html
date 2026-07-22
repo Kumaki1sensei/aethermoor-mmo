@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aethermoor MMO - Multiplayer</title>
 <style>
-:root{--bg:#0d1117;--panel:#161b22;--border:#30363d;--accent:#58a6ff;--danger:#f85149;--success:#3fb950;--warning:#d29922;--text:#c9d1d9;--muted:#8b949e;--gold:#e3b341}
+:root{--bg:#0d1117;--panel:#161b22;--border:#30363d;--accent:#58a6ff;--danger:#f85149;--success:#3fb950;--warning:#d29922;--text:#c9d1d9;--muted:#8b949e;--gold:#e3b341;--rare:#58a6ff;--epic:#a371f7;--legendary:#e3b341}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;margin:0;padding:0;overflow-x:hidden}
-.container{max-width:1000px;margin:0 auto;padding:10px}
+.container{max-width:1100px;margin:0 auto;padding:10px}
 .header{text-align:center;padding:10px;border-bottom:2px solid var(--border)}
 .header h1{color:var(--gold);margin:0;font-size:24px}
 .header p{color:var(--muted);margin:3px 0 0;font-size:12px}
-.grid{display:grid;grid-template-columns:250px 1fr 250px;gap:8px;margin-top:8px}
+.grid{display:grid;grid-template-columns:260px 1fr 260px;gap:8px;margin-top:8px}
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px}
 .panel h3{margin:0 0 6px;color:var(--accent);font-size:13px;border-bottom:1px solid var(--border);padding-bottom:4px}
 .stat-row{display:flex;justify-content:space-between;margin:3px 0;font-size:11px}
@@ -25,16 +25,16 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 .btn-success{border-color:var(--success)}.btn-success:hover{background:rgba(63,185,80,0.15)}
 .btn-gold{border-color:var(--gold);color:var(--gold)}.btn-gold:hover{background:rgba(227,179,65,0.15)}
 .btn:disabled{opacity:0.4;cursor:not-allowed}
-.log{height:220px;overflow-y:auto;font-size:11px;line-height:1.4;background:#0d1117;border-radius:5px;padding:6px;border:1px solid var(--border)}
+.log{height:200px;overflow-y:auto;font-size:11px;line-height:1.4;background:#0d1117;border-radius:5px;padding:6px;border:1px solid var(--border)}
 .log-entry{margin:2px 0;padding:2px 4px;border-radius:3px}
-.log-combat{color:#ff7b72}.log-loot{color:#3fb950}.log-info{color:#79c0ff}.log-death{color:#f85149;font-weight:bold}.log-system{color:var(--muted)}.log-pvp{color:#d29922}.log-win{color:#3fb950;font-weight:bold}
+.log-combat{color:#ff7b72}.log-loot{color:#3fb950}.log-info{color:#79c0ff}.log-death{color:#f85149;font-weight:bold}.log-system{color:var(--muted)}.log-pvp{color:#d29922}.log-win{color:#3fb950;font-weight:bold}.log-legendary{color:var(--legendary);font-weight:bold}.log-epic{color:var(--epic)}.log-rare{color:var(--rare)}
 .zone-badge{display:inline-block;padding:2px 6px;border-radius:8px;font-size:9px;font-weight:bold}
 .zone-safe{background:rgba(63,185,80,0.2);color:var(--success);border:1px solid var(--success)}
 .zone-pvp{background:rgba(248,81,73,0.2);color:var(--danger);border:1px solid var(--danger)}
 .inventory-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:4px}
-.inv-slot{aspect-ratio:1;background:#0d1117;border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;position:relative;min-height:40px}
+.inv-slot{width:100%;height:50px;background:#0d1117;border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;position:relative}
 .inv-slot:hover{border-color:var(--accent)}
-.inv-slot .qty{position:absolute;bottom:1px;right:2px;font-size:8px;color:var(--muted)}
+.inv-slot .qty{position:absolute;bottom:1px;right:2px;font-size:8px;color:var(--muted);background:rgba(0,0,0,0.7);padding:0 2px;border-radius:2px}
 .equipped{border-color:var(--gold)!important;box-shadow:0 0 3px rgba(227,179,65,0.3)}
 .item-tooltip{position:absolute;bottom:105%;left:50%;transform:translateX(-50%);background:#0d1117;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:9px;white-space:nowrap;z-index:10;display:none}
 .inv-slot:hover .item-tooltip{display:block}
@@ -59,8 +59,8 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 .respawn-screen h1{color:var(--danger);font-size:36px;margin:0}
 .respawn-screen p{color:var(--muted);font-size:13px;margin:8px 0 16px}
 .respawn-screen .dropped-items{color:var(--gold);font-size:12px;margin:5px 0;max-width:350px;text-align:center}
-.mini-map{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-top:5px}
-.map-cell{aspect-ratio:1;border-radius:3px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:8px;cursor:pointer;transition:all 0.2s;min-height:30px}
+.mini-map{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:5px}
+.map-cell{height:35px;border-radius:3px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:8px;cursor:pointer;transition:all 0.2s}
 .map-cell.safe{background:rgba(63,185,80,0.15)}.map-cell.pvp{background:rgba(248,81,73,0.1)}
 .map-cell.current{border-color:var(--accent);box-shadow:0 0 5px rgba(88,166,255,0.4)}.map-cell:hover{border-color:var(--text)}
 .combat-target{display:flex;align-items:center;gap:5px;padding:5px;margin:2px 0;background:#0d1117;border-radius:4px;border:1px solid var(--border);cursor:pointer;font-size:11px}
@@ -77,6 +77,14 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 .status-online{background:rgba(63,185,80,0.2);color:var(--success);border:1px solid var(--success)}
 .status-offline{background:rgba(248,81,73,0.2);color:var(--danger);border:1px solid var(--danger)}
 .status-connecting{background:rgba(217,179,65,0.2);color:var(--gold);border:1px solid var(--gold)}
+.kick-screen{position:fixed;inset:0;background:rgba(0,0,0,0.95);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:500}
+.kick-screen.active{display:flex}
+.kick-screen h1{color:var(--danger);font-size:28px;margin:0}
+.kick-screen p{color:var(--muted);font-size:14px;margin:10px 0 20px;max-width:400px;text-align:center}
+.rarity-common{color:#8b949e}
+.rarity-rare{color:#58a6ff}
+.rarity-epic{color:#a371f7}
+.rarity-legendary{color:#e3b341;font-weight:bold}
 </style>
 </head>
 <body>
@@ -86,7 +94,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 <div id="loginModal" class="modal-overlay active">
 <div class="modal">
 <h2>⚔️ AETHERMOOR MMO</h2>
-<p style="color:var(--muted);font-size:11px;margin:0 0 8px">Multiplayer Real | PvP Total | Morte = Dropa Tudo</p>
+<p style="color:var(--muted);font-size:11px;margin:0 0 8px">Multiplayer Real | PvP Total | Morte = Dropa Tudo | Mapa 7x7</p>
 <input type="text" id="playerName" placeholder="Seu nome de herói..." maxlength="16" value="">
 <div class="class-select">
 <div class="class-option selected" data-class="warrior" onclick="selectClass(this)">
@@ -138,7 +146,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 <div class="panel">
 <h3>📜 Log</h3>
 <div id="gameLog" class="log"></div>
-<h3>🗺️ Mapa</h3>
+<h3>🗺️ Mapa (7x7)</h3>
 <div id="miniMap" class="mini-map"></div>
 <p id="zoneInfo" style="text-align:center;margin:5px 0;font-size:11px"><span class="zone-badge zone-safe">🏦 BANCO - Seguro</span></p>
 <br>
@@ -156,6 +164,14 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 <br>
 <h3>📈 Ranking</h3>
 <div id="ranking" style="font-size:10px"></div>
+<br>
+<h3>💎 Raridades</h3>
+<div style="font-size:10px">
+<span class="rarity-common">● Comum</span><br>
+<span class="rarity-rare">● Raro</span><br>
+<span class="rarity-epic">● Épico</span><br>
+<span class="rarity-legendary">● Lendário</span>
+</div>
 </div>
 </div>
 </div>
@@ -167,6 +183,12 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 <button class="btn btn-success" onclick="respawn()" style="width:200px;font-size:14px">🔄 Ressurgir no Banco</button>
 </div>
 
+<div id="kickScreen" class="kick-screen">
+<h1>🚫 SESSÃO ENCERRADA</h1>
+<p id="kickReason">Você foi desconectado porque outra sessão foi iniciada no mesmo dispositivo.</p>
+<button class="btn btn-success" onclick="location.reload()" style="width:200px;font-size:14px">🔄 Recarregar</button>
+</div>
+
 <div id="combatOverlay" class="combat-overlay">
 <div class="combat-box">
 <h3>⚔️ COMBATE!</h3>
@@ -176,28 +198,37 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 </div>
 
 <script>
-// ===== SOCKET.IO CLIENT =====
 var socket = null;
 var player = null;
 var selectedClass = 'warrior';
 var inCombat = false;
+var MAP_SIZE = 7;
+
 var ITEMS = {
-  espada_madeira:{name:'Espada Madeira',type:'weapon',dmg:3,def:0,icon:'🗡️'},
-  espada_ferro:{name:'Espada Ferro',type:'weapon',dmg:8,def:0,icon:'⚔️'},
-  espada_aco:{name:'Espada Aço',type:'weapon',dmg:15,def:0,icon:'🗡️'},
-  adaga:{name:'Adaga',type:'weapon',dmg:10,def:0,icon:'🗡️'},
-  machado:{name:'Machado',type:'weapon',dmg:20,def:0,icon:'🪓'},
-  tunica:{name:'Túnica',type:'armor',dmg:0,def:2,icon:'👕'},
-  couro:{name:'Couro',type:'armor',dmg:0,def:5,icon:'🛡️'},
-  cota:{name:'Cota Malha',type:'armor',dmg:0,def:10,icon:'⛓️'},
-  placas:{name:'Placas',type:'armor',dmg:0,def:18,icon:'🛡️'},
-  amuleto:{name:'Amuleto',type:'accessory',dmg:2,def:2,icon:'📿'},
-  anel:{name:'Anel Força',type:'accessory',dmg:5,def:0,icon:'💍'},
-  botas:{name:'Botas',type:'accessory',dmg:0,def:1,icon:'👢'},
-  pocao_vida:{name:'Poção Vida',type:'consumable',heal:30,icon:'🧪'},
-  pocao_mana:{name:'Poção Mana',type:'consumable',mana:30,icon:'💧'},
-  pocao_grande:{name:'Poção Grande',type:'consumable',heal:60,icon:'🧪'}
+  espada_madeira:{name:'Espada Madeira',type:'weapon',dmg:3,def:0,icon:'🗡️',rarity:1},
+  tunica:{name:'Túnica',type:'armor',dmg:0,def:2,icon:'👕',rarity:1},
+  botas_velhas:{name:'Botas Velhas',type:'accessory',dmg:0,def:1,icon:'👢',rarity:1},
+  pocao_vida:{name:'Poção Vida',type:'consumable',heal:30,icon:'🧪',rarity:1},
+  pocao_mana:{name:'Poção Mana',type:'consumable',mana:30,icon:'💧',rarity:1},
+  espada_ferro:{name:'Espada Ferro',type:'weapon',dmg:8,def:0,icon:'⚔️',rarity:2},
+  couro:{name:'Couro',type:'armor',dmg:0,def:5,icon:'🛡️',rarity:2},
+  adaga:{name:'Adaga',type:'weapon',dmg:10,def:0,icon:'🗡️',rarity:2},
+  anel:{name:'Anel Força',type:'accessory',dmg:5,def:0,icon:'💍',rarity:2},
+  pocao_grande:{name:'Poção Grande',type:'consumable',heal:60,icon:'🧪',rarity:2},
+  espada_aco:{name:'Espada Aço',type:'weapon',dmg:15,def:0,icon:'🗡️',rarity:3},
+  cota:{name:'Cota Malha',type:'armor',dmg:0,def:10,icon:'⛓️',rarity:3},
+  machado:{name:'Machado',type:'weapon',dmg:20,def:0,icon:'🪓',rarity:3},
+  amuleto:{name:'Amuleto',type:'accessory',dmg:2,def:2,icon:'📿',rarity:3},
+  botas_rapidas:{name:'Botas Rápidas',type:'accessory',dmg:0,def:3,icon:'👢',rarity:3},
+  espada_fogo:{name:'Espada de Fogo',type:'weapon',dmg:35,def:5,icon:'🔥',rarity:4},
+  placas:{name:'Placas Dragão',type:'armor',dmg:5,def:25,icon:'🐉',rarity:4},
+  anel_rei:{name:'Anel do Rei',type:'accessory',dmg:15,def:10,icon:'👑',rarity:4},
+  machado_gigante:{name:'Machado Gigante',type:'weapon',dmg:40,def:0,icon:'🪓',rarity:4},
+  capa_invisivel:{name:'Capa Invisível',type:'accessory',dmg:8,def:8,icon:'🧥',rarity:4}
 };
+
+var RARITY_COLORS = {1:'#8b949e',2:'#58a6ff',3:'#a371f7',4:'#e3b341'};
+var RARITY_NAMES = {1:'Comum',2:'Raro',3:'Épico',4:'Lendário'};
 
 function selectClass(el){
   document.querySelectorAll('.class-option').forEach(function(c){c.classList.remove('selected');});
@@ -253,45 +284,47 @@ function initSocket(){
       log('Erro de conexão. Tentando novamente...','system');
     });
 
-    // ===== BUG FIX 1: Items on spawn =====
+    socket.on('kicked',function(data){
+      document.getElementById('loginModal').classList.remove('active');
+      document.getElementById('gameUI').classList.add('hidden');
+      document.getElementById('kickScreen').classList.add('active');
+      if(data && data.reason){
+        document.getElementById('kickReason').textContent = data.reason;
+      }
+    });
+
     socket.on('playerCreated',function(data){
       player = data.player;
-      // Ensure all required fields exist
       if(!player.inv) player.inv = [];
       if(!player.eq) player.eq = {weapon:null,armor:null,accessory:null};
       if(!player.bank) player.bank = [];
-      if(!player.xp) player.xp = 0;
+      if(!player.xp && player.xp !== 0) player.xp = 0;
       if(!player.xpNext) player.xpNext = 100;
-      if(!player.mana) player.mana = player.manaMax || 50;
-      if(!player.gold) player.gold = 50;
-      if(!player.kills) player.kills = 0;
-      if(!player.deaths) player.deaths = 0;
+      if(!player.mana && player.mana !== 0) player.mana = player.manaMax || 50;
+      if(!player.gold && player.gold !== 0) player.gold = 50;
+      if(!player.kills && player.kills !== 0) player.kills = 0;
+      if(!player.deaths && player.deaths !== 0) player.deaths = 0;
+      if(!player.pos) player.pos = {x:3,y:3};
 
       document.getElementById('loginModal').classList.remove('active');
       document.getElementById('gameUI').classList.remove('hidden');
+
       updateUI();
       renderMap();
       renderInventory();
       renderBank();
+
       log('Bem-vindo a Aethermoor, '+player.name+'!','info');
-      log('Você está no Banco. Guarde itens valiosos antes de sair!','info');
+      log('Mapa 7x7! Explore, encontre loot raro e lute!','info');
 
       if(data.groundItems){
         renderGround(data.groundItems);
       }
     });
 
-    socket.on('nearbyPlayers',function(list){
-      renderNearby(list);
-    });
-
-    socket.on('groundItems',function(items){
-      renderGround(items);
-    });
-
-    socket.on('groundItemsUpdated',function(items){
-      renderGround(items);
-    });
+    socket.on('nearbyPlayers',function(list){ renderNearby(list); });
+    socket.on('groundItems',function(items){ renderGround(items); });
+    socket.on('groundItemsUpdated',function(items){ renderGround(items); });
 
     socket.on('inventoryUpdated',function(inv){
       if(player) player.inv = inv;
@@ -353,7 +386,13 @@ function initSocket(){
       document.getElementById('combatOverlay').classList.remove('active');
       log('Você venceu! +'+data.xp+' XP, +'+data.gold+' ouro.','win');
       if(data.drops && data.drops.length){
-        log('Itens dropados: '+data.drops.map(function(d){return d.icon+' '+d.name;}).join(', '),'loot');
+        var dropMsg = 'Itens dropados: ';
+        data.drops.forEach(function(d){
+          var r = d.rarity || 1;
+          var color = RARITY_COLORS[r] || '#8b949e';
+          dropMsg += '<span style="color:'+color+'">'+d.icon+' '+d.name+'</span> ';
+        });
+        log(dropMsg, 'loot');
       }
     });
 
@@ -362,8 +401,16 @@ function initSocket(){
       document.getElementById('combatOverlay').classList.remove('active');
       document.getElementById('gameUI').classList.add('hidden');
       document.getElementById('respawnScreen').classList.add('active');
-      document.getElementById('droppedItems').innerHTML='<strong>Itens perdidos:</strong><br>'+
-        data.drops.map(function(d){return d.icon+' '+d.name;}).join(' ');
+
+      var dropsHtml = '<strong>Itens perdidos:</strong><br>';
+      if(data.drops && data.drops.length){
+        data.drops.forEach(function(d){
+          var r = d.rarity || 1;
+          var color = RARITY_COLORS[r] || '#8b949e';
+          dropsHtml += '<span style="color:'+color+'">'+d.icon+' '+d.name+'</span> ';
+        });
+      }
+      document.getElementById('droppedItems').innerHTML = dropsHtml;
       log('Você foi derrotado por '+data.killer+'! Perdeu tudo!','death');
     });
 
@@ -443,7 +490,6 @@ function startGame(){
   socket.emit('createPlayer',{name:name,cls:selectedClass});
 }
 
-// ===== BUG FIX 2 & 3: Safe stat display =====
 function safeNum(val, def){
   def = def || 0;
   if(val === undefined || val === null || isNaN(val)) return def;
@@ -452,8 +498,6 @@ function safeNum(val, def){
 
 function updateUI(){
   if(!player) return;
-
-  // Ensure all player fields exist
   player.hp = safeNum(player.hp, 100);
   player.hpMax = safeNum(player.hpMax, 100);
   player.mana = safeNum(player.mana, 50);
@@ -466,29 +510,20 @@ function updateUI(){
   player.lvl = safeNum(player.lvl, 1);
 
   document.getElementById('headerInfo').innerHTML=player.name+' | Nível '+player.lvl+' | Pos: ('+player.pos.x+','+player.pos.y+')';
-
   document.getElementById('hpText').textContent=player.hp+'/'+player.hpMax;
   document.getElementById('hpBar').style.width=Math.max(0,Math.min(100,(player.hp/player.hpMax*100)))+'%';
-
   document.getElementById('manaText').textContent=player.mana+'/'+player.manaMax;
   document.getElementById('manaBar').style.width=Math.max(0,Math.min(100,(player.mana/player.manaMax*100)))+'%';
-
   document.getElementById('xpText').textContent=player.xp+'/'+player.xpNext;
   document.getElementById('xpBar').style.width=Math.max(0,Math.min(100,(player.xp/player.xpNext*100)))+'%';
 
-  // Calculate stats from class + equipment
   var dmg=0,def=0,spd=0;
   if(player.cls==='warrior'){dmg=12;def=8;spd=8;}
   else if(player.cls==='mage'){dmg=18;def=3;spd=10;}
   else if(player.cls==='rogue'){dmg=15;def=4;spd=16;}
-
   if(player.eq && player.eq.weapon && ITEMS[player.eq.weapon]) dmg += ITEMS[player.eq.weapon].dmg || 0;
   if(player.eq && player.eq.armor && ITEMS[player.eq.armor]) def += ITEMS[player.eq.armor].def || 0;
-  if(player.eq && player.eq.accessory && ITEMS[player.eq.accessory]){
-    dmg += ITEMS[player.eq.accessory].dmg || 0;
-    def += ITEMS[player.eq.accessory].def || 0;
-  }
-
+  if(player.eq && player.eq.accessory && ITEMS[player.eq.accessory]){dmg += ITEMS[player.eq.accessory].dmg || 0; def += ITEMS[player.eq.accessory].def || 0;}
   document.getElementById('dmgText').textContent=dmg;
   document.getElementById('defText').textContent=def;
   document.getElementById('spdText').textContent=spd;
@@ -496,7 +531,7 @@ function updateUI(){
   document.getElementById('killsText').textContent=player.kills;
   document.getElementById('deathsText').textContent=player.deaths;
 
-  var isBank=(player.pos.x>=1&&player.pos.x<=2&&player.pos.y>=1&&player.pos.y<=2);
+  var isBank=(player.pos.x>=2&&player.pos.x<=4&&player.pos.y>=2&&player.pos.y<=4);
   document.getElementById('zoneInfo').innerHTML=isBank?
     '<span class="zone-badge zone-safe">🏦 BANCO - Seguro</span>':
     '<span class="zone-badge zone-pvp">⚔️ ZONA PvP - Perigoso!</span>';
@@ -506,8 +541,8 @@ function updateUI(){
 function renderInventory(){
   var g=document.getElementById('inventoryGrid');
   g.innerHTML='';
+
   if(!player || !player.inv){
-    // Render empty slots
     for(var i=0;i<16;i++){
       var slot=document.createElement('div');
       slot.className='inv-slot';
@@ -515,21 +550,45 @@ function renderInventory(){
     }
     return;
   }
+
   for(var i=0;i<16;i++){
     var slot=document.createElement('div');
     slot.className='inv-slot';
     var item=player.inv[i];
-    if(item && ITEMS[item.id]){
-      slot.innerHTML=ITEMS[item.id].icon+'<span class="qty">'+safeNum(item.qty,1)+'</span>';
+
+    if(item && item.id && ITEMS[item.id]){
+      var itemData = ITEMS[item.id];
+      var qty = safeNum(item.qty, 1);
+      var rarity = itemData.rarity || 1;
+      var rarityColor = RARITY_COLORS[rarity] || '#8b949e';
+
+      slot.innerHTML = itemData.icon + '<span class="qty">' + qty + '</span>';
+      slot.style.borderColor = rarityColor;
+
       var tt=document.createElement('div');
       tt.className='item-tooltip';
-      tt.textContent=ITEMS[item.id].name;
+      tt.innerHTML = '<span style="color:'+rarityColor+'">'+itemData.name+'</span><br><span style="color:var(--muted)">'+RARITY_NAMES[rarity]+'</span>';
+      if(itemData.dmg) tt.innerHTML += '<br>⚔️ Dano: '+itemData.dmg;
+      if(itemData.def) tt.innerHTML += '<br>🛡️ Defesa: '+itemData.def;
+      if(itemData.heal) tt.innerHTML += '<br>❤️ Cura: '+itemData.heal;
+      if(itemData.mana) tt.innerHTML += '<br>💧 Mana: '+itemData.mana;
       slot.appendChild(tt);
-      if(player.eq && (player.eq.weapon===item.id || player.eq.armor===item.id || player.eq.accessory===item.id)){
-        slot.classList.add('equipped');
+
+      var isEquipped = false;
+      if(player.eq){
+        if(player.eq.weapon === item.id) isEquipped = true;
+        if(player.eq.armor === item.id) isEquipped = true;
+        if(player.eq.accessory === item.id) isEquipped = true;
       }
-      slot.onclick=(function(idx){return function(){if(socket)socket.emit('equip',{index:idx});};})(i);
+      if(isEquipped) slot.classList.add('equipped');
+
+      (function(idx){
+        slot.onclick=function(){
+          if(socket) socket.emit('equip',{index:idx});
+        };
+      })(i);
     }
+
     g.appendChild(slot);
   }
 }
@@ -549,51 +608,47 @@ function renderBank(){
     var slot=document.createElement('div');
     slot.className='inv-slot';
     var item=player.bank[i];
-    if(item && ITEMS[item.id]){
-      slot.innerHTML=ITEMS[item.id].icon+'<span class="qty">'+safeNum(item.qty,1)+'</span>';
+    if(item && item.id && ITEMS[item.id]){
+      var itemData = ITEMS[item.id];
+      var qty = safeNum(item.qty, 1);
+      var rarity = itemData.rarity || 1;
+      var rarityColor = RARITY_COLORS[rarity] || '#8b949e';
+      slot.innerHTML=itemData.icon+'<span class="qty">'+qty+'</span>';
+      slot.style.borderColor = rarityColor;
       var tt=document.createElement('div');
       tt.className='item-tooltip';
-      tt.textContent=ITEMS[item.id].name;
+      tt.innerHTML = '<span style="color:'+rarityColor+'">'+itemData.name+'</span><br><span style="color:var(--muted)">'+RARITY_NAMES[rarity]+'</span>';
       slot.appendChild(tt);
-      slot.onclick=(function(idx){return function(){if(socket)socket.emit('withdraw',{index:idx});};})(i);
+      (function(idx){
+        slot.onclick=function(){if(socket)socket.emit('withdraw',{index:idx});};
+      })(i);
     }
     g.appendChild(slot);
   }
 }
 
-// ===== BUG FIX 2: Map rendering with click handlers =====
 function renderMap(){
   var g=document.getElementById('miniMap');
   g.innerHTML='';
-  for(var y=0;y<5;y++){
-    for(var x=0;x<5;x++){
+  for(var y=0;y<MAP_SIZE;y++){
+    for(var x=0;x<MAP_SIZE;x++){
       var cell=document.createElement('div');
       cell.className='map-cell';
-      var isBankCell=(x>=1&&x<=2&&y>=1&&y<=2);
+      var isBankCell=(x>=2&&x<=4&&y>=2&&y<=4);
       cell.classList.add(isBankCell?'safe':'pvp');
       cell.textContent=isBankCell?'🏦':'⚔️';
       if(player && player.pos && player.pos.x===x && player.pos.y===y){
         cell.classList.add('current');
         cell.textContent='👤';
       }
-      // Use closure to capture x,y correctly
       (function(cx,cy){
         cell.onclick=function(){
-          if(!player || inCombat){
-            log('Não pode mover em combate!','system');
-            return;
-          }
-          if(!player.pos){
-            log('Erro: posição desconhecida','system');
-            return;
-          }
+          if(!player || inCombat){log('Não pode mover em combate!','system');return;}
+          if(!player.pos){log('Erro: posição desconhecida','system');return;}
           var dx=Math.abs(cx-player.pos.x);
           var dy=Math.abs(cy-player.pos.y);
-          if(dx+dy===1){
-            if(socket) socket.emit('move',{x:cx,y:cy});
-          }else{
-            log('Só pode mover para tiles adjacentes!','system');
-          }
+          if(dx+dy===1){if(socket)socket.emit('move',{x:cx,y:cy});}
+          else{log('Só pode mover para tiles adjacentes!','system');}
         };
       })(x,y);
       g.appendChild(cell);
@@ -621,9 +676,7 @@ function renderNearby(list){
       btn.className='btn btn-danger';
       btn.style='width:auto;padding:2px 6px;font-size:9px;margin:0';
       btn.textContent='⚔️ Atacar';
-      (function(tid){
-        btn.onclick=function(){socket.emit('attack',{targetId:tid});};
-      })(p.id);
+      (function(tid){btn.onclick=function(){socket.emit('attack',{targetId:tid});};})(p.id);
       el.appendChild(btn);
     }
     g.appendChild(el);
@@ -640,14 +693,16 @@ function renderGround(items){
   items.forEach(function(item,idx){
     var el=document.createElement('div');
     el.className='ground-item';
-    var itemName = ITEMS[item.id] ? ITEMS[item.id].name : item.id;
-    var itemIcon = ITEMS[item.id] ? ITEMS[item.id].icon : '📦';
-    el.innerHTML='<span>'+itemIcon+' '+itemName+' x'+safeNum(item.qty,1)+'</span>';
+    var itemData = ITEMS[item.id];
+    var itemName = itemData ? itemData.name : item.id;
+    var itemIcon = itemData ? itemData.icon : '📦';
+    var rarity = itemData ? (itemData.rarity || 1) : 1;
+    var rarityColor = RARITY_COLORS[rarity] || '#8b949e';
+
+    el.innerHTML='<span style="color:'+rarityColor+'">'+itemIcon+' '+itemName+' x'+safeNum(item.qty,1)+'</span>';
     var btn=document.createElement('button');
     btn.textContent='Pegar';
-    (function(i){
-      btn.onclick=function(){if(socket)socket.emit('pickup',{index:i});};
-    })(idx);
+    (function(i){btn.onclick=function(){if(socket)socket.emit('pickup',{index:i});};})(idx);
     el.appendChild(btn);
     g.appendChild(el);
   });
@@ -659,7 +714,6 @@ function withdrawAll(){if(socket)socket.emit('withdrawAll');}
 function respawn(){if(socket)socket.emit('respawn');}
 function leaveGame(){location.reload();}
 
-// Initialize on page load
 window.onload=function(){
   initSocket();
   document.getElementById('playerName').focus();
