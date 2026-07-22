@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aethermoor MMO - Multiplayer</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--border:#30363d;--accent:#58a6ff;--danger:#f85149;--success:#3fb950;--warning:#d29922;--text:#c9d1d9;--muted:#8b949e;--gold:#e3b341}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;margin:0;padding:0;overflow-x:hidden}
+.container{max-width:1000px;margin:0 auto;padding:10px}
+.header{text-align:center;padding:10px;border-bottom:2px solid var(--border)}
+.header h1{color:var(--gold);margin:0;font-size:24px}
+.header p{color:var(--muted);margin:3px 0 0;font-size:12px}
+.grid{display:grid;grid-template-columns:250px 1fr 250px;gap:8px;margin-top:8px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px}
+.panel h3{margin:0 0 6px;color:var(--accent);font-size:13px;border-bottom:1px solid var(--border);padding-bottom:4px}
+.stat-row{display:flex;justify-content:space-between;margin:3px 0;font-size:11px}
+.stat-bar-bg{background:#21262d;height:7px;border-radius:3px;margin-top:2px;overflow:hidden}
+.stat-bar-fill{height:100%;border-radius:3px;transition:width 0.3s}
+.hp-fill{background:var(--danger)}.xp-fill{background:var(--accent)}.mana-fill{background:#a371f7}
+.btn{display:block;width:100%;padding:7px;margin:3px 0;border:1px solid var(--border);border-radius:5px;background:#21262d;color:var(--text);cursor:pointer;font-size:11px;transition:all 0.2s;text-align:center}
+.btn:hover{background:#30363d;border-color:var(--accent)}
+.btn-danger{border-color:var(--danger)}.btn-danger:hover{background:rgba(248,81,73,0.15)}
+.btn-success{border-color:var(--success)}.btn-success:hover{background:rgba(63,185,80,0.15)}
+.btn-gold{border-color:var(--gold);color:var(--gold)}.btn-gold:hover{background:rgba(227,179,65,0.15)}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+.log{height:220px;overflow-y:auto;font-size:11px;line-height:1.4;background:#0d1117;border-radius:5px;padding:6px;border:1px solid var(--border)}
+.log-entry{margin:2px 0;padding:2px 4px;border-radius:3px}
+.log-combat{color:#ff7b72}.log-loot{color:#3fb950}.log-info{color:#79c0ff}.log-death{color:#f85149;font-weight:bold}.log-system{color:var(--muted)}.log-pvp{color:#d29922}.log-win{color:#3fb950;font-weight:bold}
+.zone-badge{display:inline-block;padding:2px 6px;border-radius:8px;font-size:9px;font-weight:bold}
+.zone-safe{background:rgba(63,185,80,0.2);color:var(--success);border:1px solid var(--success)}
+.zone-pvp{background:rgba(248,81,73,0.2);color:var(--danger);border:1px solid var(--danger)}
+.inventory-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:4px}
+.inv-slot{aspect-ratio:1;background:#0d1117;border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;position:relative}
+.inv-slot:hover{border-color:var(--accent)}
+.inv-slot .qty{position:absolute;bottom:1px;right:2px;font-size:8px;color:var(--muted)}
+.equipped{border-color:var(--gold)!important;box-shadow:0 0 3px rgba(227,179,65,0.3)}
+.item-tooltip{position:absolute;bottom:105%;left:50%;transform:translateX(-50%);background:#0d1117;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:9px;white-space:nowrap;z-index:10;display:none}
+.inv-slot:hover .item-tooltip{display:block}
+.ground-item{display:flex;justify-content:space-between;align-items:center;padding:3px 5px;margin:2px 0;background:#0d1117;border-radius:4px;border:1px solid var(--border);font-size:10px}
+.ground-item button{padding:2px 6px;font-size:9px;border-radius:3px;border:1px solid var(--success);background:transparent;color:var(--success);cursor:pointer}
+.ground-item button:hover{background:rgba(63,185,80,0.15)}
+.player-entry{display:flex;justify-content:space-between;align-items:center;padding:3px 5px;margin:2px 0;border-radius:4px;font-size:10px;background:#0d1117;border:1px solid var(--border)}
+.player-entry .name{color:var(--accent);font-weight:bold}.player-entry .lvl{color:var(--muted)}
+.player-entry .hp-bar{width:45px;height:4px;background:#21262d;border-radius:2px;overflow:hidden}
+.player-entry .hp-bar-inner{height:100%;background:var(--danger);border-radius:2px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-overlay.active{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;width:320px;text-align:center}
+.modal h2{color:var(--gold);margin:0 0 10px;font-size:20px}
+.modal input{width:100%;padding:8px;margin:5px 0;background:#0d1117;border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:13px;box-sizing:border-box}
+.modal .class-select{display:flex;gap:5px;margin:8px 0}
+.modal .class-option{flex:1;padding:6px;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:10px;transition:all 0.2s}
+.modal .class-option:hover,.modal .class-option.selected{border-color:var(--accent);background:rgba(88,166,255,0.1)}
+.modal .class-option .icon{font-size:16px;display:block;margin-bottom:2px}
+.respawn-screen{position:fixed;inset:0;background:rgba(0,0,0,0.95);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:200}
+.respawn-screen.active{display:flex}
+.respawn-screen h1{color:var(--danger);font-size:36px;margin:0}
+.respawn-screen p{color:var(--muted);font-size:13px;margin:8px 0 16px}
+.respawn-screen .dropped-items{color:var(--gold);font-size:12px;margin:5px 0;max-width:350px;text-align:center}
+.mini-map{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-top:5px}
+.map-cell{aspect-ratio:1;border-radius:3px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:8px;cursor:pointer;transition:all 0.2s}
+.map-cell.safe{background:rgba(63,185,80,0.15)}.map-cell.pvp{background:rgba(248,81,73,0.1)}
+.map-cell.current{border-color:var(--accent);box-shadow:0 0 5px rgba(88,166,255,0.4)}.map-cell:hover{border-color:var(--text)}
+.combat-target{display:flex;align-items:center;gap:5px;padding:5px;margin:2px 0;background:#0d1117;border-radius:4px;border:1px solid var(--border);cursor:pointer;font-size:11px}
+.combat-target:hover{border-color:var(--danger)}
+.combat-target .target-hp{flex:1;height:5px;background:#21262d;border-radius:2px;overflow:hidden}
+.combat-target .target-hp-fill{height:100%;background:var(--danger);border-radius:2px}
+.combat-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:150}
+.combat-overlay.active{display:flex}
+.combat-box{background:var(--panel);border:1px solid var(--danger);border-radius:10px;padding:20px;width:350px;text-align:center}
+.combat-box h3{color:var(--danger);margin:0 0 10px}
+.combat-log{height:150px;overflow-y:auto;font-size:11px;background:#0d1117;border-radius:5px;padding:8px;margin:10px 0;text-align:left}
+.hidden{display:none!important}
+.connection-status{position:fixed;top:10px;right:10px;padding:5px 10px;border-radius:5px;font-size:11px;z-index:300}
+.status-online{background:rgba(63,185,80,0.2);color:var(--success);border:1px solid var(--success)}
+.status-offline{background:rgba(248,81,73,0.2);color:var(--danger);border:1px solid var(--danger)}
+.status-connecting{background:rgba(217,179,65,0.2);color:var(--gold);border:1px solid var(--gold)}
+</style>
+</head>
+<body>
+
+<div id="connectionStatus" class="connection-status status-connecting">🟡 Conectando...</div>
+
+<div id="loginModal" class="modal-overlay active">
+<div class="modal">
+<h2>⚔️ AETHERMOOR MMO</h2>
+<p style="color:var(--muted);font-size:11px;margin:0 0 8px">Multiplayer Real | PvP Total | Morte = Dropa Tudo</p>
+<input type="text" id="playerName" placeholder="Seu nome de herói..." maxlength="16" value="">
+<div class="class-select">
+<div class="class-option selected" data-class="warrior" onclick="selectClass(this)">
+<span class="icon">⚔️</span><strong>Guerreiro</strong><div style="color:var(--muted);font-size:8px">HP+ Dano+</div>
+</div>
+<div class="class-option" data-class="mage" onclick="selectClass(this)">
+<span class="icon">🔮</span><strong>Mago</strong><div style="color:var(--muted);font-size:8px">Mana+ Magia+</div>
+</div>
+<div class="class-option" data-class="rogue" onclick="selectClass(this)">
+<span class="icon">🗡️</span><strong>Ladino</strong><div style="color:var(--muted);font-size:8px">Veloc+ Crit+</div>
+</div>
+</div>
+<button class="btn btn-success" onclick="startGame()" style="margin-top:5px">🎮 ENTRAR NO MUNDO</button>
+<p style="color:var(--muted);font-size:10px;margin-top:8px">Servidor: <span id="serverUrl">localhost:3000</span></p>
+</div>
+</div>
+
+<div id="respawnScreen" class="respawn-screen">
+<h1>💀 VOCÊ MORREU!</h1>
+<p id="deathMessage">Você foi derrotado...</p>
+<div class="dropped-items" id="droppedItems"></div>
+<p style="color:var(--muted);font-size:11px">Você perdeu TODOS os itens equipados e do inventário!</p>
+<button class="btn btn-success" onclick="respawn()" style="width:180px;margin-top:10px">🌟 RESSURGIR NO BANCO</button>
+</div>
+
+<div id="combatOverlay" class="combat-overlay">
+<div class="combat-box">
+<h3>⚔️ COMBATE EM ANDAMENTO</h3>
+<div id="combatVs" style="font-size:13px;color:var(--text)"></div>
+<div class="combat-log" id="combatLogBox"></div>
+<button class="btn btn-danger" onclick="forfeitCombat()" style="margin-top:5px">🏳️ Desistir (Morrer)</button>
+</div>
+</div>
+
+<div class="container" id="gameContainer" style="display:none">
+<div class="header">
+<h1>⚔️ AETHERMOOR</h1>
+<p id="zoneInfo">Carregando...</p>
+</div>
+<div class="grid">
+<div>
+<div class="panel">
+<h3>👤 <span id="charName">Herói</span> <span style="color:var(--muted);font-size:10px">Lv.<span id="charLvl">1</span></span></h3>
+<div class="stat-row"><span>❤️ Vida</span><span id="hpText">100/100</span></div>
+<div class="stat-bar-bg"><div class="stat-bar-fill hp-fill" id="hpBar" style="width:100%"></div></div>
+<div class="stat-row" style="margin-top:3px"><span>✨ Mana</span><span id="manaText">50/50</span></div>
+<div class="stat-bar-bg"><div class="stat-bar-fill mana-fill" id="manaBar" style="width:100%"></div></div>
+<div class="stat-row" style="margin-top:3px"><span>⭐ XP</span><span id="xpText">0/100</span></div>
+<div class="stat-bar-bg"><div class="stat-bar-fill xp-fill" id="xpBar" style="width:0%"></div></div>
+<div style="margin-top:6px;border-top:1px solid var(--border);padding-top:5px">
+<div class="stat-row"><span>🗡️ Dano</span><span id="statDmg">10</span></div>
+<div class="stat-row"><span>🛡️ Defesa</span><span id="statDef">5</span></div>
+<div class="stat-row"><span>⚡ Veloc</span><span id="statSpd">10</span></div>
+<div class="stat-row"><span>💰 Ouro</span><span id="statGold" style="color:var(--gold)">0</span></div>
+<div class="stat-row"><span>⚔️ Kills</span><span id="statKills">0</span></div>
+<div class="stat-row"><span>💀 Mortes</span><span id="statDeaths">0</span></div>
+</div>
+</div>
+<div class="panel" style="margin-top:6px">
+<h3>🎒 Inventário</h3>
+<div class="inventory-grid" id="inventory"></div>
+<div style="margin-top:4px;font-size:9px;color:var(--muted)">Clique para equipar/usar</div>
+</div>
+<div class="panel" style="margin-top:6px">
+<h3>🗺️ Mapa</h3>
+<div class="mini-map" id="miniMap"></div>
+<div style="margin-top:4px;font-size:9px;display:flex;gap:8px;justify-content:center">
+<span><span style="color:var(--success)">■</span> Banco</span>
+<span><span style="color:var(--danger)">■</span> PvP</span>
+</div>
+</div>
+</div>
+<div>
+<div class="panel">
+<h3>📜 Aventura</h3>
+<div class="log" id="gameLog"></div>
+</div>
+<div class="panel" style="margin-top:6px">
+<h3>⚔️ Ações</h3>
+<button class="btn btn-success" id="btnRest" onclick="rest()">🏕️ Descansar</button>
+<button class="btn btn-danger" id="btnAttack" onclick="openCombatMenu()" disabled>⚔️ Atacar Jogador</button>
+<button class="btn btn-gold" id="btnBank" onclick="openBank()" disabled>🏦 Acessar Banco</button>
+</div>
+<div class="panel" style="margin-top:6px;display:none" id="combatPanel">
+<h3>🎯 Alvos Próximos</h3>
+<div id="combatTargets"></div>
+<button class="btn" onclick="closeCombatMenu()" style="margin-top:3px">❌ Cancelar</button>
+</div>
+<div class="panel" style="margin-top:6px;display:none" id="bankPanel">
+<h3>🏦 Banco (Seguro)</h3>
+<p style="font-size:10px;color:var(--muted);margin:0 0 5px">Itens aqui ficam seguros mesmo se morrer!</p>
+<div id="bankStorage"></div>
+<div style="margin-top:4px;display:flex;gap:3px">
+<button class="btn" onclick="depositAll()" style="flex:1;font-size:10px">📥 Depositar Tudo</button>
+<button class="btn" onclick="withdrawAll()" style="flex:1;font-size:10px">📤 Retirar Tudo</button>
+</div>
+<button class="btn" onclick="closeBank()" style="margin-top:3px">❌ Fechar</button>
+</div>
+<div class="panel" style="margin-top:6px">
+<h3>📦 Itens no Chão</h3>
+<div class="ground-items" id="groundItems"><p style="color:var(--muted);font-size:10px;text-align:center;margin:0">Nenhum item.</p></div>
+</div>
+</div>
+<div>
+<div class="panel">
+<h3>👥 Jogadores na Zona <span id="playerCount" style="color:var(--muted)">(0)</span></h3>
+<div class="players-list" id="playersList"></div>
+</div>
+<div class="panel" style="margin-top:6px">
+<h3>📊 Ranking Global</h3>
+<div id="leaderboard"></div>
+</div>
+<div class="panel" style="margin-top:6px">
+<h3>💡 Como Jogar</h3>
+<div style="font-size:10px;color:var(--muted);line-height:1.5">
+• Equipe itens no inventário<br>
+• Pegue itens do chão<br>
+• Guarde no Banco (seguro)<br>
+• Fora do Banco = PvP!<br>
+• Morrer = perde TUDO<br>
+• Colegas = jogadores reais!
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+// ==================== SOCKET.IO CLIENTE ====================
+const socket = io();
+let player = null;
+let selectedClass = 'warrior';
+let nearbyPlayers = [];
+let inCombat = false;
+let combatLog = [];
+
+const ITEMS = {
+  espada_madeira: { n: 'Espada Madeira', i: '🗡️' },
+  espada_ferro: { n: 'Espada Ferro', i: '⚔️' },
+  espada_aco: { n: 'Espada Aço', i: '🗡️' },
+  adaga: { n: 'Adaga', i: '🗡️' },
+  machado: { n: 'Machado', i: '🪓' },
+  tunica: { n: 'Túnica', i: '👕' },
+  couro: { n: 'Couro', i: '🛡️' },
+  cota: { n: 'Cota Malha', i: '⛓️' },
+  placas: { n: 'Placas', i: '🛡️' },
+  amuleto: { n: 'Amuleto', i: '📿' },
+  anel: { n: 'Anel Força', i: '💍' },
+  botas: { n: 'Botas', i: '👢' },
+  pocao_vida: { n: 'Poção Vida', i: '🧪' },
+  pocao_mana: { n: 'Poção Mana', i: '💧' },
+  pocao_grande: { n: 'Poção Grande', i: '🧪' }
+};
+
+const MAP_LAYOUT = [
+  ['pvp','pvp','pvp','pvp','pvp'],
+  ['pvp','bank','bank','pvp','pvp'],
+  ['pvp','bank','bank','pvp','pvp'],
+  ['pvp','pvp','pvp','pvp','pvp'],
+  ['pvp','pvp','pvp','pvp','pvp']
+];
+
+// Conexão
+socket.on('connect', function() {
+  updateStatus('online', '🟢 Online');
+  log('Conectado ao servidor!', 'system');
+});
+
+socket.on('disconnect', function() {
+  updateStatus('offline', '🔴 Desconectado');
+  log('Desconectado do servidor!', 'death');
+});
+
+socket.on('connect_error', function() {
+  updateStatus('offline', '🔴 Erro de conexão');
+});
+
+function updateStatus(type, text) {
+  var el = document.getElementById('connectionStatus');
+  if (el) {
+    el.className = 'connection-status status-' + type;
+    el.textContent = text;
+  }
+}
+
+// ==================== LOGIN ====================
+function selectClass(el) {
+  document.querySelectorAll('.class-option').forEach(function(o) { o.classList.remove('selected'); });
+  el.classList.add('selected');
+  selectedClass = el.dataset.class;
+}
+
+function startGame() {
+  var name = (document.getElementById('playerName').value || '').trim() || 'Herói';
+  socket.emit('createPlayer', { name: name, cls: selectedClass });
+}
+
+socket.on('playerCreated', function(data) {
+  player = data.player;
+  document.getElementById('loginModal').classList.remove('active');
+  document.getElementById('gameContainer').style.display = 'block';
+  document.getElementById('charName').textContent = player.name;
+  document.getElementById('serverUrl').textContent = window.location.host;
+  updateUI();
+  renderMap();
+  renderGroundItems(data.groundItems);
+  log('Bem-vindo a Aethermoor, ' + player.name + '!', 'system');
+  log('🏦 Você nasceu no Banco. Aqui é SEGURO.', 'info');
+  log('⚔️ Fora do Banco é PvP TOTAL com jogadores REAIS!', 'pvp');
+  log('💀 Se MORRER, perde TUDO exceto itens no BANCO!', 'death');
+});
+
+// ==================== EVENTOS DO SERVIDOR ====================
+socket.on('playerJoined', function(data) {
+  log(data.name + ' entrou no mundo!', 'info');
+});
+
+socket.on('playerLeft', function(data) {
+  log('Um jogador saiu.', 'system');
+  nearbyPlayers = nearbyPlayers.filter(function(p) { return p.id !== data.id; });
+  renderNearbyPlayers();
+});
+
+socket.on('playerEnteredZone', function(data) {
+  if (data.id === socket.id) return;
+  log(data.name + ' chegou aqui!', 'pvp');
+  nearbyPlayers.push(data);
+  renderNearbyPlayers();
+});
+
+socket.on('playerLeftZone', function(data) {
+  nearbyPlayers = nearbyPlayers.filter(function(p) { return p.id !== data.id; });
+  renderNearbyPlayers();
+});
+
+socket.on('nearbyPlayers', function(data) {
+  nearbyPlayers = data;
+  renderNearbyPlayers();
+});
+
+socket.on('moved', function(data) {
+  player.pos = data.pos;
+  updateUI();
+  renderMap();
+  log('Você foi para ' + (data.isBank ? 'o Banco' : 'Zona PvP') + '.', 'info');
+});
+
+socket.on('groundItems', function(data) {
+  renderGroundItems(data);
+});
+
+socket.on('groundItemsUpdated', function(data) {
+  renderGroundItems(data);
+});
+
+socket.on('inventoryUpdated', function(data) {
+  player.inv = data;
+  renderInventory();
+});
+
+socket.on('equipmentUpdated', function(data) {
+  player.eq = data.eq;
+  player.inv = data.inv;
+  renderInventory();
+  updateStats(data.stats);
+});
+
+socket.on('bankUpdated', function(data) {
+  player.bank = data.bank;
+  player.inv = data.inv;
+  renderBank();
+  renderInventory();
+});
+
+socket.on('healed', function(data) {
+  player.hp = data.hp;
+  updateUI();
+  log('🧪 +'+data.amount+' HP!', 'info');
+});
+
+socket.on('manaRestored', function(data) {
+  player.mana = data.mana;
+  updateUI();
+  log('💧 +'+data.amount+' Mana!', 'info');
+});
+
+socket.on('rested', function(data) {
+  player.hp = data.hp;
+  player.mana = data.mana;
+  updateUI();
+  log('🏕️ Recuperou HP e Mana!', 'info');
+});
+
+socket.on('levelUp', function(data) {
+  log('🎉 LEVEL '+data.lvl+'!', 'info');
+});
+
+// Combate
+socket.on('combatStarted', function(data) {
+  inCombat = true;
+  combatLog = [];
+  document.getElementById('combatOverlay').classList.add('active');
+  document.getElementById('combatVs').textContent = data.attacker 
+    ? '⚔️ ' + data.target.name + ' te atacou!' 
+    : '⚔️ Você vs ' + data.target.name;
+  log('⚔️ COMBATE INICIADO!', 'pvp');
+  updateUI();
+});
+
+socket.on('combatLog', function(data) {
+  combatLog.push(data);
+  renderCombatLog();
+
+  var msg = data.attacker + ' → ' + data.defender + ': ' + data.dmg + ' dano' + (data.crit ? ' 💥' : '');
+  log(msg, data.type === 'attack' ? 'combat' : 'pvp');
+
+  // Atualizar HP do alvo se for jogador próximo
+  var target = nearbyPlayers.find(function(p) { return p.name === data.defender; });
+  if (target) {
+    target.hp = data.defenderHp;
+    renderNearbyPlayers();
+  }
+});
+
+socket.on('combatWon', function(data) {
+  inCombat = false;
+  document.getElementById('combatOverlay').classList.remove('active');
+  log('🏆 Você VENCEU! +' + data.xp + ' XP, +' + data.gold + ' ouro', 'win');
+  if (data.drops && data.drops.length > 0) {
+    log('💎 Drops: ' + data.drops.map(function(d) { return d.icon + ' ' + d.name; }).join(', '), 'loot');
+  }
+  updateUI();
+});
+
+socket.on('died', function(data) {
+  inCombat = false;
+  player.hp = 0;
+  document.getElementById('combatOverlay').classList.remove('active');
+
+  var dn = data.drops.map(function(d) { return d.icon + ' ' + d.name; }).join(', ');
+  document.getElementById('deathMessage').textContent = data.killer + ' te matou...';
+  document.getElementById('droppedItems').textContent = data.drops.length > 0 ? 'Perdeu: ' + dn : 'Sem itens para perder.';
+  document.getElementById('respawnScreen').classList.add('active');
+
+  log('💀 VOCÊ MORREU! Matou: ' + data.killer, 'death');
+  updateUI();
+});
+
+socket.on('playerDied', function(data) {
+  log('💀 ' + data.name + ' foi morto por ' + data.killer + '!', 'death');
+});
+
+socket.on('error', function(msg) {
+  log('❌ ' + msg, 'system');
+});
+
+// ==================== AÇÕES DO CLIENTE ====================
+function moveTo(x, y) {
+  if (inCombat) { log('Em combate!', 'system'); return; }
+  socket.emit('move', { x: x, y: y });
+}
+
+function toggleEquip(index) {
+  socket.emit('equip', { index: index });
+}
+
+function pickupItem(index) {
+  socket.emit('pickup', { index: index });
+}
+
+function rest() {
+  socket.emit('rest');
+}
+
+function openCombatMenu() {
+  if (inCombat) return;
+  if (nearbyPlayers.length === 0) { log('Ninguém por perto!', 'system'); return; }
+
+  var panel = document.getElementById('combatPanel');
+  if (panel) panel.style.display = 'block';
+
+  var html = nearbyPlayers.map(function(t) {
+    var pct = (t.hp / t.hpMax) * 100;
+    return '<div class="combat-target" onclick="attackPlayer('' + t.id + '')">' +
+      '<span>' + getClassIcon(t.cls) + ' ' + t.name + '</span>' +
+      '<span style="color:var(--muted);font-size:9px">Lv.' + t.lvl + '</span>' +
+      '<div class="target-hp"><div class="target-hp-fill" style="width:' + pct + '%"></div></div>' +
+      '<span style="font-size:9px">' + t.hp + '/' + t.hpMax + '</span>' +
+      '</div>';
+  }).join('');
+
+  var te = document.getElementById('combatTargets');
+  if (te) te.innerHTML = html;
+}
+
+function closeCombatMenu() {
+  var panel = document.getElementById('combatPanel');
+  if (panel) panel.style.display = 'none';
+}
+
+function attackPlayer(targetId) {
+  closeCombatMenu();
+  socket.emit('attack', { targetId: targetId });
+}
+
+function forfeitCombat() {
+  socket.emit('forfeit');
+}
+
+socket.on('forfeitAccepted', function() {
+  inCombat = false;
+  document.getElementById('combatOverlay').classList.remove('active');
+  log('🏳️ Você desistiu do combate!', 'system');
+  updateUI();
+});
+
+function openBank() {
+  var panel = document.getElementById('bankPanel');
+  if (panel) panel.style.display = 'block';
+  renderBank();
+}
+
+function closeBank() {
+  var panel = document.getElementById('bankPanel');
+  if (panel) panel.style.display = 'none';
+}
+
+function depositAll() {
+  socket.emit('depositAll');
+}
+
+function withdrawAll() {
+  socket.emit('withdrawAll');
+}
+
+function withdraw(index) {
+  socket.emit('withdraw', { index: index });
+}
+
+function respawn() {
+  socket.emit('respawn');
+}
+
+socket.on('respawned', function(data) {
+  player.pos = data.pos;
+  player.hp = data.hp;
+  player.mana = data.mana;
+  document.getElementById('respawnScreen').classList.remove('active');
+  log('🌟 Ressurgiu no Banco!', 'info');
+  updateUI();
+  renderMap();
+});
+
+// ==================== RENDERIZAÇÃO ====================
+function updateUI() {
+  if (!player) return;
+
+  var cl = document.getElementById('charLvl');
+  var ht = document.getElementById('hpText');
+  var hb = document.getElementById('hpBar');
+  var mt = document.getElementById('manaText');
+  var mb = document.getElementById('manaBar');
+  var xt = document.getElementById('xpText');
+  var xb = document.getElementById('xpBar');
+
+  if (cl) cl.textContent = player.lvl;
+  if (ht) ht.textContent = player.hp + '/' + player.hpMax;
+  if (hb) hb.style.width = ((player.hp / player.hpMax) * 100) + '%';
+  if (mt) mt.textContent = player.mana + '/' + player.manaMax;
+  if (mb) mb.style.width = ((player.mana / player.manaMax) * 100) + '%';
+  if (xt) xt.textContent = player.xp + '/' + player.xpNext;
+  if (xb) xb.style.width = ((player.xp / player.xpNext) * 100) + '%';
+
+  var isBank = player.pos.x >= 1 && player.pos.x <= 2 && player.pos.y >= 1 && player.pos.y <= 2;
+  var zb = isBank ? '<span class="zone-badge zone-safe">🏦 SEGURO</span>' : '<span class="zone-badge zone-pvp">⚔️ PvP</span>';
+  var zi = document.getElementById('zoneInfo');
+  if (zi) zi.innerHTML = (isBank ? 'Banco' : 'Zona PvP') + ' ' + zb;
+
+  var br = document.getElementById('btnRest');
+  var ba = document.getElementById('btnAttack');
+  var bb = document.getElementById('btnBank');
+  if (br) br.disabled = inCombat || !isBank;
+  if (ba) ba.disabled = inCombat || isBank;
+  if (bb) bb.disabled = inCombat || !isBank;
+
+  renderInventory();
+  renderNearbyPlayers();
+}
+
+function updateStats(stats) {
+  var sd = document.getElementById('statDmg');
+  var sf = document.getElementById('statDef');
+  var ss = document.getElementById('statSpd');
+  if (sd) sd.textContent = stats.dmg;
+  if (sf) sf.textContent = stats.def;
+  if (ss) ss.textContent = stats.spd;
+}
+
+function renderInventory() {
+  if (!player) return;
+  var ig = document.getElementById('inventory');
+  if (!ig) return;
+  ig.innerHTML = '';
+  for (var i = 0; i < 16; i++) {
+    var it = player.inv ? player.inv[i] : null;
+    var div = document.createElement('div');
+    div.className = 'inv-slot';
+    if (it) {
+      var d = ITEMS[it.id];
+      var eq = (player.eq && (player.eq.weapon === it.id || player.eq.armor === it.id || player.eq.accessory === it.id));
+      if (eq) div.classList.add('equipped');
+      div.innerHTML = (d ? d.i : '📦') + '<span class="qty">' + (it.qty > 1 ? it.qty : '') + '</span>' +
+        '<div class="item-tooltip">' + (d ? d.n : it.id) + (eq ? ' [EQ]' : '') + '</div>';
+      div.onclick = (function(idx) { return function() { toggleEquip(idx); }; })(i);
+    }
+    ig.appendChild(div);
+  }
+}
+
+function renderGroundItems(items) {
+  var ge = document.getElementById('groundItems');
+  if (!ge) return;
+  if (!items || items.length === 0) {
+    ge.innerHTML = '<p style="color:var(--muted);font-size:10px;text-align:center;margin:0">Nenhum item.</p>';
+  } else {
+    ge.innerHTML = items.map(function(it, i) {
+      var d = ITEMS[it.id];
+      return '<div class="ground-item"><span>' + (d ? d.i : '📦') + ' ' + (d ? d.n : it.id) + '</span><button onclick="pickupItem(' + i + ')">📥</button></div>';
+    }).join('');
+  }
+}
+
+function renderNearbyPlayers() {
+  var pl = document.getElementById('playersList');
+  var pc = document.getElementById('playerCount');
+  if (pc) pc.textContent = '(' + nearbyPlayers.length + ')';
+  if (!pl) return;
+  if (nearbyPlayers.length === 0) {
+    pl.innerHTML = '<p style="color:var(--muted);font-size:10px;text-align:center;margin:0">Sozinho aqui.</p>';
+  } else {
+    pl.innerHTML = nearbyPlayers.map(function(p) {
+      var pct = (p.hp / p.hpMax) * 100;
+      return '<div class="player-entry">' +
+        '<span class="name">' + getClassIcon(p.cls) + ' ' + p.name + '</span>' +
+        '<span class="lvl">Lv.' + p.lvl + '</span>' +
+        '<div class="hp-bar"><div class="hp-bar-inner" style="width:' + pct + '%"></div></div>' +
+        '</div>';
+    }).join('');
+  }
+}
+
+function renderBank() {
+  if (!player) return;
+  var bs = document.getElementById('bankStorage');
+  if (!bs) return;
+  if (!player.bank || player.bank.length === 0) {
+    bs.innerHTML = '<p style="color:var(--muted);font-size:10px;text-align:center">Vazio.</p>';
+  } else {
+    bs.innerHTML = player.bank.map(function(it, i) {
+      var d = ITEMS[it.id];
+      return '<div class="ground-item"><span>' + (d ? d.i : '📦') + ' ' + (d ? d.n : it.id) + ' x' + it.qty + '</span><button onclick="withdraw(' + i + ')">📤</button></div>';
+    }).join('');
+  }
+}
+
+function renderMap() {
+  if (!player) return;
+  var mm = document.getElementById('miniMap');
+  if (!mm) return;
+  mm.innerHTML = '';
+  for (var y = 0; y < MAP_LAYOUT.length; y++) {
+    for (var x = 0; x < MAP_LAYOUT[y].length; x++) {
+      var zk = MAP_LAYOUT[y][x];
+      var cell = document.createElement('div');
+      cell.className = 'map-cell ' + (zk === 'bank' ? 'safe' : 'pvp');
+      if (x === player.pos.x && y === player.pos.y) {
+        cell.classList.add('current');
+        cell.textContent = '👤';
+      } else {
+        cell.textContent = zk === 'bank' ? '🏦' : '⚔️';
+      }
+      cell.onclick = (function(nx, ny) { return function() { moveTo(nx, ny); }; })(x, y);
+      mm.appendChild(cell);
+    }
+  }
+}
+
+function renderCombatLog() {
+  var box = document.getElementById('combatLogBox');
+  if (!box) return;
+  box.innerHTML = combatLog.map(function(entry) {
+    var color = entry.type === 'attack' ? '#ff7b72' : '#ffa657';
+    var crit = entry.crit ? ' <strong style="color:#f85149">💥 CRÍTICO!</strong>' : '';
+    return '<div style="color:' + color + '">' + entry.attacker + ' → ' + entry.defender + ': ' + entry.dmg + ' dano' + crit + '</div>';
+  }).join('');
+  box.scrollTop = box.scrollHeight;
+}
+
+function getClassIcon(cls) {
+  return { warrior: '⚔️', mage: '🔮', rogue: '🗡️' }[cls] || '👤';
+}
+
+function log(msg, type) {
+  var el = document.getElementById('gameLog');
+  if (!el) return;
+  var entry = document.createElement('div');
+  entry.className = 'log-entry log-' + type;
+  entry.textContent = '[' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + '] ' + msg;
+  el.appendChild(entry);
+  el.scrollTop = el.scrollHeight;
+}
+</script>
+</body>
+</html>
