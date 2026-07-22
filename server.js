@@ -88,7 +88,6 @@ const groundItems = new Map();
 const activeIPs = new Map();
 
 function isBank(x, y) { return BANK_TILES.some(t => t.x === x && t.y === y); }
-
 function getStats(p) {
   let dmg = p.baseDmg, def = p.baseDef, spd = p.baseSpd;
   if (p.eq.weapon && ITEMS[p.eq.weapon]) dmg += ITEMS[p.eq.weapon].dmg || 0;
@@ -96,7 +95,6 @@ function getStats(p) {
   if (p.eq.accessory && ITEMS[p.eq.accessory]) { dmg += ITEMS[p.eq.accessory].dmg || 0; def += ITEMS[p.eq.accessory].def || 0; }
   return { dmg, def, spd };
 }
-
 function calcDamage(attacker, defender) {
   const a = getStats(attacker), d = getStats(defender);
   let raw = a.dmg + Math.floor(Math.random() * 5);
@@ -105,7 +103,6 @@ function calcDamage(attacker, defender) {
   if (Math.random() < 0.15) return { dmg: Math.floor(dmg * 1.5), crit: true };
   return { dmg, crit: false };
 }
-
 function addGroundItem(x, y, itemId, qty = 1) {
   const key = `${x},${y}`;
   if (!groundItems.has(key)) groundItems.set(key, []);
@@ -113,33 +110,22 @@ function addGroundItem(x, y, itemId, qty = 1) {
   if (existing) existing.qty += qty;
   else groundItems.get(key).push({ id: itemId, qty });
 }
-
 function removeGroundItem(x, y, index) {
   const key = `${x},${y}`;
   const items = groundItems.get(key);
   if (!items || !items[index]) return null;
   return items.splice(index, 1)[0];
 }
-
 function sanitizePlayer(p) {
-  return {
-    id: p.id, name: p.name, cls: p.cls, lvl: p.lvl,
-    hp: p.hp, hpMax: p.hpMax, mana: p.mana, manaMax: p.manaMax,
-    xp: p.xp, xpNext: p.xpNext, gold: p.gold,
-    pos: p.pos, eq: p.eq, inCombat: p.inCombat,
-    kills: p.kills, deaths: p.deaths
-  };
+  return { id: p.id, name: p.name, cls: p.cls, lvl: p.lvl, hp: p.hp, hpMax: p.hpMax, mana: p.mana, manaMax: p.manaMax, xp: p.xp, xpNext: p.xpNext, gold: p.gold, pos: p.pos, eq: p.eq, inCombat: p.inCombat, kills: p.kills, deaths: p.deaths };
 }
-
 function getPlayersInZone(x, y, exceptId) {
   const result = [];
   players.forEach((p, id) => { if (id !== exceptId && p.pos.x === x && p.pos.y === y && p.hp > 0) result.push(p); });
   return result;
 }
-
 function getGroundItemsAt(x, y) { const key = `${x},${y}`; return groundItems.get(key) || []; }
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-
 function checkLevelUp(p) {
   while (p.xp >= p.xpNext) {
     p.xp -= p.xpNext; p.lvl++; p.xpNext = Math.floor(p.xpNext * 1.5);
@@ -148,9 +134,11 @@ function checkLevelUp(p) {
     p.socket.emit('levelUp', { lvl: p.lvl });
   }
 }
-
 function broadcastToZone(x, y, event, data, exceptId = null) {
   players.forEach((p, id) => { if (id !== exceptId && p.pos.x === x && p.pos.y === y && p.socket) p.socket.emit(event, data); });
+}
+function broadcastAll(event, data, exceptId = null) {
+  players.forEach((p, id) => { if (id !== exceptId && p.socket) p.socket.emit(event, data); });
 }
 
 function spawnRandomLoot() {
@@ -160,9 +148,25 @@ function spawnRandomLoot() {
   addGroundItem(x, y, itemId, 1);
   broadcastToZone(x, y, 'groundItemsUpdated', getGroundItemsAt(x, y));
 }
-
 for (let i = 0; i < 15; i++) spawnRandomLoot();
 setInterval(spawnRandomLoot, 30000);
+
+// ===== LOAD MODULES =====
+const fs = require('fs');
+const pathModules = path.join(__dirname, 'modules');
+if (fs.existsSync(pathModules)) {
+  fs.readdirSync(pathModules).forEach(file => {
+    if (file.endsWith('.js')) {
+      try {
+        const mod = require(path.join(pathModules, file));
+        if (typeof mod === 'function') {
+          mod({ io, players, groundItems, activeIPs, ITEMS, CLASSES, MAP_SIZE, SPAWN_POS, BANK_TILES, isBank, getStats, calcDamage, addGroundItem, removeGroundItem, sanitizePlayer, getPlayersInZone, getGroundItemsAt, sleep, checkLevelUp, broadcastToZone, broadcastAll });
+          console.log('Module loaded:', file);
+        }
+      } catch(e) { console.error('Module error:', file, e.message); }
+    }
+  });
+}
 
 io.on('connection', (socket) => {
   const clientIP = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
@@ -185,8 +189,7 @@ io.on('connection', (socket) => {
       id: socket.id, socket: socket,
       name: (name || 'Herói').substring(0, 16),
       cls: cls || 'warrior', lvl: 1, xp: 0, xpNext: 100,
-      hp: base.hpMax, hpMax: base.hpMax,
-      mana: base.manaMax, manaMax: base.manaMax,
+      hp: base.hpMax, hpMax: base.hpMax, mana: base.manaMax, manaMax: base.manaMax,
       baseDmg: base.dmg, baseDef: base.def, baseSpd: base.spd,
       gold: 50, pos: { ...SPAWN_POS },
       inv: [{ id: 'espada_madeira', qty: 1 }, { id: 'tunica', qty: 1 }, { id: 'pocao_vida', qty: 2 }],
@@ -326,6 +329,15 @@ io.on('connection', (socket) => {
     socket.emit('respawned', { pos: p.pos, hp: p.hp, mana: p.mana });
   });
 
+  // ===== CHAT =====
+  socket.on('chat', ({ message }) => {
+    const p = players.get(socket.id);
+    if (!p || !message) return;
+    const cleanMsg = message.trim().substring(0, 200);
+    if (!cleanMsg) return;
+    broadcastAll('chatMessage', { name: p.name, message: cleanMsg, cls: p.cls, lvl: p.lvl });
+  });
+
   socket.on('disconnect', () => {
     const p = players.get(socket.id);
     if (p) {
@@ -406,4 +418,4 @@ function handleDeath(victim, killer) {
 }
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => { console.log('Aethermoor MMO Server v9 rodando na porta ' + PORT); });
+server.listen(PORT, () => { console.log('Aethermoor MMO Server v10 rodando na porta ' + PORT); });
