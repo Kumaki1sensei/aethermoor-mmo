@@ -32,7 +32,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 .zone-safe{background:rgba(63,185,80,0.2);color:var(--success);border:1px solid var(--success)}
 .zone-pvp{background:rgba(248,81,73,0.2);color:var(--danger);border:1px solid var(--danger)}
 .inventory-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:4px}
-.inv-slot{aspect-ratio:1;background:#0d1117;border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;position:relative}
+.inv-slot{aspect-ratio:1;background:#0d1117;border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;position:relative;min-height:40px}
 .inv-slot:hover{border-color:var(--accent)}
 .inv-slot .qty{position:absolute;bottom:1px;right:2px;font-size:8px;color:var(--muted)}
 .equipped{border-color:var(--gold)!important;box-shadow:0 0 3px rgba(227,179,65,0.3)}
@@ -60,7 +60,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 .respawn-screen p{color:var(--muted);font-size:13px;margin:8px 0 16px}
 .respawn-screen .dropped-items{color:var(--gold);font-size:12px;margin:5px 0;max-width:350px;text-align:center}
 .mini-map{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-top:5px}
-.map-cell{aspect-ratio:1;border-radius:3px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:8px;cursor:pointer;transition:all 0.2s}
+.map-cell{aspect-ratio:1;border-radius:3px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:8px;cursor:pointer;transition:all 0.2s;min-height:30px}
 .map-cell.safe{background:rgba(63,185,80,0.15)}.map-cell.pvp{background:rgba(248,81,73,0.1)}
 .map-cell.current{border-color:var(--accent);box-shadow:0 0 5px rgba(88,166,255,0.4)}.map-cell:hover{border-color:var(--text)}
 .combat-target{display:flex;align-items:center;gap:5px;padding:5px;margin:2px 0;background:#0d1117;border-radius:4px;border:1px solid var(--border);cursor:pointer;font-size:11px}
@@ -176,9 +176,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 </div>
 
 <script>
-// ===== SOCKET.IO CLIENT - INLINE (no external dependency) =====
-// We use a lightweight Socket.IO client loaded from CDN, with fallback
-
+// ===== SOCKET.IO CLIENT =====
 var socket = null;
 var player = null;
 var selectedClass = 'warrior';
@@ -202,21 +200,25 @@ var ITEMS = {
 };
 
 function selectClass(el){
-  document.querySelectorAll('.class-option').forEach(c=>c.classList.remove('selected'));
+  document.querySelectorAll('.class-option').forEach(function(c){c.classList.remove('selected');});
   el.classList.add('selected');
   selectedClass=el.dataset.class;
 }
 
-function log(msg,type='system'){
-  const d=document.getElementById('gameLog');
-  const e=document.createElement('div');
+function log(msg,type){
+  type = type || 'system';
+  var d=document.getElementById('gameLog');
+  var e=document.createElement('div');
   e.className='log-entry log-'+type;
-  e.textContent='['+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'] '+msg;
-  d.appendChild(e);d.scrollTop=d.scrollHeight;
+  var time = new Date();
+  var timeStr = ('0'+time.getHours()).slice(-2)+':'+('0'+time.getMinutes()).slice(-2);
+  e.textContent='['+timeStr+'] '+msg;
+  d.appendChild(e);
+  d.scrollTop=d.scrollHeight;
 }
 
 function setStatus(status,msg){
-  const el=document.getElementById('connectionStatus');
+  var el=document.getElementById('connectionStatus');
   el.className='connection-status status-'+status;
   el.textContent=msg;
 }
@@ -224,7 +226,6 @@ function setStatus(status,msg){
 function initSocket(){
   setStatus('connecting','🟡 Conectando...');
 
-  // Load Socket.IO client from CDN then connect
   var script=document.createElement('script');
   script.src='https://cdn.socket.io/4.7.2/socket.io.min.js';
   script.onload=function(){
@@ -249,17 +250,35 @@ function initSocket(){
 
     socket.on('connect_error',function(err){
       setStatus('connecting','🟡 Reconectando...');
-      log('Erro de conexão: '+err.message,'system');
+      log('Erro de conexão. Tentando novamente...','system');
     });
 
+    // ===== BUG FIX 1: Items on spawn =====
     socket.on('playerCreated',function(data){
-      player=data.player;
+      player = data.player;
+      // Ensure all required fields exist
+      if(!player.inv) player.inv = [];
+      if(!player.eq) player.eq = {weapon:null,armor:null,accessory:null};
+      if(!player.bank) player.bank = [];
+      if(!player.xp) player.xp = 0;
+      if(!player.xpNext) player.xpNext = 100;
+      if(!player.mana) player.mana = player.manaMax || 50;
+      if(!player.gold) player.gold = 50;
+      if(!player.kills) player.kills = 0;
+      if(!player.deaths) player.deaths = 0;
+
       document.getElementById('loginModal').classList.remove('active');
       document.getElementById('gameUI').classList.remove('hidden');
       updateUI();
       renderMap();
+      renderInventory();
+      renderBank();
       log('Bem-vindo a Aethermoor, '+player.name+'!','info');
       log('Você está no Banco. Guarde itens valiosos antes de sair!','info');
+
+      if(data.groundItems){
+        renderGround(data.groundItems);
+      }
     });
 
     socket.on('nearbyPlayers',function(list){
@@ -275,26 +294,31 @@ function initSocket(){
     });
 
     socket.on('inventoryUpdated',function(inv){
-      player.inv=inv;
+      if(player) player.inv = inv;
       renderInventory();
     });
 
     socket.on('equipmentUpdated',function(data){
-      player.eq=data.eq;
-      player.inv=data.inv;
+      if(player){
+        player.eq = data.eq;
+        player.inv = data.inv;
+      }
       renderInventory();
       updateUI();
     });
 
     socket.on('bankUpdated',function(data){
-      player.bank=data.bank;
-      player.inv=data.inv;
+      if(player){
+        player.bank = data.bank;
+        player.inv = data.inv;
+      }
       renderBank();
       renderInventory();
     });
 
     socket.on('moved',function(data){
-      player.pos=data.pos;
+      if(!player) return;
+      player.pos = data.pos;
       updateUI();
       renderMap();
       if(data.isBank){
@@ -305,7 +329,7 @@ function initSocket(){
     });
 
     socket.on('combatStarted',function(data){
-      inCombat=true;
+      inCombat = true;
       document.getElementById('combatOverlay').classList.add('active');
       document.getElementById('combatTargetName').textContent='Vs. '+data.target.name;
       document.getElementById('combatLog').innerHTML='';
@@ -316,55 +340,64 @@ function initSocket(){
       var cl=document.getElementById('combatLog');
       var e=document.createElement('div');
       if(data.type==='attack'){
-        e.innerHTML='<span style="color:var(--success)">Você atacou '+data.defender+' por '+data.dmg+(data.crit?' 💥CRIT!':'')+'</span>';
+        e.innerHTML='<span style="color:#3fb950">Você atacou '+data.defender+' por '+data.dmg+(data.crit?' 💥CRIT!':'')+'</span>';
       }else{
-        e.innerHTML='<span style="color:var(--danger)">'+data.attacker+' atacou você por '+data.dmg+(data.crit?' 💥CRIT!':'')+'</span>';
+        e.innerHTML='<span style="color:#f85149">'+data.attacker+' atacou você por '+data.dmg+(data.crit?' 💥CRIT!':'')+'</span>';
       }
-      cl.appendChild(e);cl.scrollTop=cl.scrollHeight;
+      cl.appendChild(e);
+      cl.scrollTop=cl.scrollHeight;
     });
 
     socket.on('combatWon',function(data){
-      inCombat=false;
+      inCombat = false;
       document.getElementById('combatOverlay').classList.remove('active');
       log('Você venceu! +'+data.xp+' XP, +'+data.gold+' ouro.','win');
-      if(data.drops&&data.drops.length){
-        log('Itens dropados: '+data.drops.map(d=>d.icon+' '+d.name).join(', '),'loot');
+      if(data.drops && data.drops.length){
+        log('Itens dropados: '+data.drops.map(function(d){return d.icon+' '+d.name;}).join(', '),'loot');
       }
     });
 
     socket.on('died',function(data){
-      inCombat=false;
+      inCombat = false;
       document.getElementById('combatOverlay').classList.remove('active');
       document.getElementById('gameUI').classList.add('hidden');
       document.getElementById('respawnScreen').classList.add('active');
       document.getElementById('droppedItems').innerHTML='<strong>Itens perdidos:</strong><br>'+
-        data.drops.map(d=>d.icon+' '+d.name).join(' ');
+        data.drops.map(function(d){return d.icon+' '+d.name;}).join(' ');
       log('Você foi derrotado por '+data.killer+'! Perdeu tudo!','death');
     });
 
     socket.on('respawned',function(data){
-      player.hp=data.hp;player.mana=data.mana;player.pos=data.pos;
-      player.inCombat=false;
+      if(!player) return;
+      player.hp = data.hp;
+      player.mana = data.mana;
+      player.pos = data.pos;
+      player.inCombat = false;
       document.getElementById('respawnScreen').classList.remove('active');
       document.getElementById('gameUI').classList.remove('hidden');
-      updateUI();renderMap();
+      updateUI();
+      renderMap();
       log('Você ressurgiu no Banco.','info');
     });
 
     socket.on('rested',function(data){
-      player.hp=data.hp;player.mana=data.mana;
+      if(!player) return;
+      player.hp = data.hp;
+      player.mana = data.mana;
       updateUI();
       log('Você descansou. HP e Mana recuperados.','info');
     });
 
     socket.on('healed',function(data){
-      player.hp=data.hp;
+      if(!player) return;
+      player.hp = data.hp;
       updateUI();
       log('Você usou uma poção. +'+data.amount+' HP.','info');
     });
 
     socket.on('manaRestored',function(data){
-      player.mana=data.mana;
+      if(!player) return;
+      player.mana = data.mana;
       updateUI();
       log('Mana restaurada. +'+data.amount+' Mana.','info');
     });
@@ -410,31 +443,58 @@ function startGame(){
   socket.emit('createPlayer',{name:name,cls:selectedClass});
 }
 
-function updateUI(){
-  if(!player)return;
-  document.getElementById('headerInfo').innerHTML=player.name+' | Nível '+player.lvl+' | Pos: ('+player.pos.x+','+player.pos.y+')';
-  document.getElementById('hpText').textContent=player.hp+'/'+player.hpMax;
-  document.getElementById('hpBar').style.width=(player.hp/player.hpMax*100)+'%';
-  document.getElementById('manaText').textContent=player.mana+'/'+player.manaMax;
-  document.getElementById('manaBar').style.width=(player.mana/player.manaMax*100)+'%';
-  document.getElementById('xpText').textContent=player.xp+'/'+player.xpNext;
-  document.getElementById('xpBar').style.width=(player.xp/player.xpNext*100)+'%';
+// ===== BUG FIX 2 & 3: Safe stat display =====
+function safeNum(val, def){
+  def = def || 0;
+  if(val === undefined || val === null || isNaN(val)) return def;
+  return val;
+}
 
+function updateUI(){
+  if(!player) return;
+
+  // Ensure all player fields exist
+  player.hp = safeNum(player.hp, 100);
+  player.hpMax = safeNum(player.hpMax, 100);
+  player.mana = safeNum(player.mana, 50);
+  player.manaMax = safeNum(player.manaMax, 50);
+  player.xp = safeNum(player.xp, 0);
+  player.xpNext = safeNum(player.xpNext, 100);
+  player.gold = safeNum(player.gold, 50);
+  player.kills = safeNum(player.kills, 0);
+  player.deaths = safeNum(player.deaths, 0);
+  player.lvl = safeNum(player.lvl, 1);
+
+  document.getElementById('headerInfo').innerHTML=player.name+' | Nível '+player.lvl+' | Pos: ('+player.pos.x+','+player.pos.y+')';
+
+  document.getElementById('hpText').textContent=player.hp+'/'+player.hpMax;
+  document.getElementById('hpBar').style.width=Math.max(0,Math.min(100,(player.hp/player.hpMax*100)))+'%';
+
+  document.getElementById('manaText').textContent=player.mana+'/'+player.manaMax;
+  document.getElementById('manaBar').style.width=Math.max(0,Math.min(100,(player.mana/player.manaMax*100)))+'%';
+
+  document.getElementById('xpText').textContent=player.xp+'/'+player.xpNext;
+  document.getElementById('xpBar').style.width=Math.max(0,Math.min(100,(player.xp/player.xpNext*100)))+'%';
+
+  // Calculate stats from class + equipment
   var dmg=0,def=0,spd=0;
   if(player.cls==='warrior'){dmg=12;def=8;spd=8;}
   else if(player.cls==='mage'){dmg=18;def=3;spd=10;}
   else if(player.cls==='rogue'){dmg=15;def=4;spd=16;}
 
-  if(player.eq&&player.eq.weapon&&ITEMS[player.eq.weapon])dmg+=ITEMS[player.eq.weapon].dmg||0;
-  if(player.eq&&player.eq.armor&&ITEMS[player.eq.armor])def+=ITEMS[player.eq.armor].def||0;
-  if(player.eq&&player.eq.accessory&&ITEMS[player.eq.accessory]){dmg+=ITEMS[player.eq.accessory].dmg||0;def+=ITEMS[player.eq.accessory].def||0;}
+  if(player.eq && player.eq.weapon && ITEMS[player.eq.weapon]) dmg += ITEMS[player.eq.weapon].dmg || 0;
+  if(player.eq && player.eq.armor && ITEMS[player.eq.armor]) def += ITEMS[player.eq.armor].def || 0;
+  if(player.eq && player.eq.accessory && ITEMS[player.eq.accessory]){
+    dmg += ITEMS[player.eq.accessory].dmg || 0;
+    def += ITEMS[player.eq.accessory].def || 0;
+  }
 
   document.getElementById('dmgText').textContent=dmg;
   document.getElementById('defText').textContent=def;
   document.getElementById('spdText').textContent=spd;
-  document.getElementById('goldText').textContent=player.gold||0;
-  document.getElementById('killsText').textContent=player.kills||0;
-  document.getElementById('deathsText').textContent=player.deaths||0;
+  document.getElementById('goldText').textContent=player.gold;
+  document.getElementById('killsText').textContent=player.kills;
+  document.getElementById('deathsText').textContent=player.deaths;
 
   var isBank=(player.pos.x>=1&&player.pos.x<=2&&player.pos.y>=1&&player.pos.y<=2);
   document.getElementById('zoneInfo').innerHTML=isBank?
@@ -446,21 +506,29 @@ function updateUI(){
 function renderInventory(){
   var g=document.getElementById('inventoryGrid');
   g.innerHTML='';
-  if(!player||!player.inv)return;
+  if(!player || !player.inv){
+    // Render empty slots
+    for(var i=0;i<16;i++){
+      var slot=document.createElement('div');
+      slot.className='inv-slot';
+      g.appendChild(slot);
+    }
+    return;
+  }
   for(var i=0;i<16;i++){
     var slot=document.createElement('div');
     slot.className='inv-slot';
     var item=player.inv[i];
-    if(item&&ITEMS[item.id]){
-      slot.innerHTML=ITEMS[item.id].icon+'<span class="qty">'+item.qty+'</span>';
+    if(item && ITEMS[item.id]){
+      slot.innerHTML=ITEMS[item.id].icon+'<span class="qty">'+safeNum(item.qty,1)+'</span>';
       var tt=document.createElement('div');
       tt.className='item-tooltip';
       tt.textContent=ITEMS[item.id].name;
       slot.appendChild(tt);
-      if(player.eq&&(player.eq.weapon===item.id||player.eq.armor===item.id||player.eq.accessory===item.id)){
+      if(player.eq && (player.eq.weapon===item.id || player.eq.armor===item.id || player.eq.accessory===item.id)){
         slot.classList.add('equipped');
       }
-      slot.onclick=(function(idx){return function(){socket.emit('equip',{index:idx});}})(i);
+      slot.onclick=(function(idx){return function(){if(socket)socket.emit('equip',{index:idx});};})(i);
     }
     g.appendChild(slot);
   }
@@ -469,23 +537,31 @@ function renderInventory(){
 function renderBank(){
   var g=document.getElementById('bankGrid');
   g.innerHTML='';
-  if(!player||!player.bank)return;
+  if(!player || !player.bank){
+    for(var i=0;i<16;i++){
+      var slot=document.createElement('div');
+      slot.className='inv-slot';
+      g.appendChild(slot);
+    }
+    return;
+  }
   for(var i=0;i<16;i++){
     var slot=document.createElement('div');
     slot.className='inv-slot';
     var item=player.bank[i];
-    if(item&&ITEMS[item.id]){
-      slot.innerHTML=ITEMS[item.id].icon+'<span class="qty">'+item.qty+'</span>';
+    if(item && ITEMS[item.id]){
+      slot.innerHTML=ITEMS[item.id].icon+'<span class="qty">'+safeNum(item.qty,1)+'</span>';
       var tt=document.createElement('div');
       tt.className='item-tooltip';
       tt.textContent=ITEMS[item.id].name;
       slot.appendChild(tt);
-      slot.onclick=(function(idx){return function(){socket.emit('withdraw',{index:idx});}})(i);
+      slot.onclick=(function(idx){return function(){if(socket)socket.emit('withdraw',{index:idx});};})(i);
     }
     g.appendChild(slot);
   }
 }
 
+// ===== BUG FIX 2: Map rendering with click handlers =====
 function renderMap(){
   var g=document.getElementById('miniMap');
   g.innerHTML='';
@@ -493,19 +569,33 @@ function renderMap(){
     for(var x=0;x<5;x++){
       var cell=document.createElement('div');
       cell.className='map-cell';
-      var isBank=(x>=1&&x<=2&&y>=1&&y<=2);
-      cell.classList.add(isBank?'safe':'pvp');
-      cell.textContent=isBank?'🏦':'⚔️';
-      if(player&&player.pos.x===x&&player.pos.y===y){
+      var isBankCell=(x>=1&&x<=2&&y>=1&&y<=2);
+      cell.classList.add(isBankCell?'safe':'pvp');
+      cell.textContent=isBankCell?'🏦':'⚔️';
+      if(player && player.pos && player.pos.x===x && player.pos.y===y){
         cell.classList.add('current');
         cell.textContent='👤';
       }
-      cell.onclick=(function(cx,cy){return function(){
-        if(!player||inCombat)return;
-        var dx=Math.abs(cx-player.pos.x),dy=Math.abs(cy-player.pos.y);
-        if(dx+dy===1)socket.emit('move',{x:cx,y:cy});
-        else log('Só pode mover para tiles adjacentes!','system');
-      };})(x,y);
+      // Use closure to capture x,y correctly
+      (function(cx,cy){
+        cell.onclick=function(){
+          if(!player || inCombat){
+            log('Não pode mover em combate!','system');
+            return;
+          }
+          if(!player.pos){
+            log('Erro: posição desconhecida','system');
+            return;
+          }
+          var dx=Math.abs(cx-player.pos.x);
+          var dy=Math.abs(cy-player.pos.y);
+          if(dx+dy===1){
+            if(socket) socket.emit('move',{x:cx,y:cy});
+          }else{
+            log('Só pode mover para tiles adjacentes!','system');
+          }
+        };
+      })(x,y);
       g.appendChild(cell);
     }
   }
@@ -514,19 +604,26 @@ function renderMap(){
 function renderNearby(list){
   var g=document.getElementById('nearbyPlayers');
   g.innerHTML='';
-  if(!list||!list.length){g.innerHTML='<p style="color:var(--muted);font-size:10px;text-align:center">Nenhum jogador por perto.</p>';return;}
+  if(!list || !list.length){
+    g.innerHTML='<p style="color:var(--muted);font-size:10px;text-align:center">Nenhum jogador por perto.</p>';
+    return;
+  }
   list.forEach(function(p){
     var el=document.createElement('div');
     el.className='player-entry';
-    var hpPct=Math.floor((p.hp/p.hpMax)*100);
-    el.innerHTML='<div><span class="name">'+p.name+'</span> <span class="lvl">Lv.'+p.lvl+'</span></div>'+
+    var hpMax = safeNum(p.hpMax, 100);
+    var hp = safeNum(p.hp, hpMax);
+    var hpPct=Math.floor((hp/hpMax)*100);
+    el.innerHTML='<div><span class="name">'+p.name+'</span> <span class="lvl">Lv.'+safeNum(p.lvl,1)+'</span></div>'+
       '<div class="hp-bar"><div class="hp-bar-inner" style="width:'+hpPct+'%"></div></div>';
-    if(!inCombat){
+    if(!inCombat && socket){
       var btn=document.createElement('button');
       btn.className='btn btn-danger';
       btn.style='width:auto;padding:2px 6px;font-size:9px;margin:0';
       btn.textContent='⚔️ Atacar';
-      btn.onclick=function(){socket.emit('attack',{targetId:p.id});};
+      (function(tid){
+        btn.onclick=function(){socket.emit('attack',{targetId:tid});};
+      })(p.id);
       el.appendChild(btn);
     }
     g.appendChild(el);
@@ -536,23 +633,30 @@ function renderNearby(list){
 function renderGround(items){
   var g=document.getElementById('groundItems');
   g.innerHTML='';
-  if(!items||!items.length){g.innerHTML='<p style="color:var(--muted);font-size:10px;text-align:center">Nenhum item no chão.</p>';return;}
+  if(!items || !items.length){
+    g.innerHTML='<p style="color:var(--muted);font-size:10px;text-align:center">Nenhum item no chão.</p>';
+    return;
+  }
   items.forEach(function(item,idx){
     var el=document.createElement('div');
     el.className='ground-item';
-    el.innerHTML='<span>'+(ITEMS[item.id]?ITEMS[item.id].icon:'📦')+' '+(ITEMS[item.id]?ITEMS[item.id].name:item.id)+' x'+item.qty+'</span>';
+    var itemName = ITEMS[item.id] ? ITEMS[item.id].name : item.id;
+    var itemIcon = ITEMS[item.id] ? ITEMS[item.id].icon : '📦';
+    el.innerHTML='<span>'+itemIcon+' '+itemName+' x'+safeNum(item.qty,1)+'</span>';
     var btn=document.createElement('button');
     btn.textContent='Pegar';
-    btn.onclick=function(){socket.emit('pickup',{index:idx});};
+    (function(i){
+      btn.onclick=function(){if(socket)socket.emit('pickup',{index:i});};
+    })(idx);
     el.appendChild(btn);
     g.appendChild(el);
   });
 }
 
-function rest(){socket.emit('rest');}
-function depositAll(){socket.emit('depositAll');}
-function withdrawAll(){socket.emit('withdrawAll');}
-function respawn(){socket.emit('respawn');}
+function rest(){if(socket)socket.emit('rest');}
+function depositAll(){if(socket)socket.emit('depositAll');}
+function withdrawAll(){if(socket)socket.emit('withdrawAll');}
+function respawn(){if(socket)socket.emit('respawn');}
 function leaveGame(){location.reload();}
 
 // Initialize on page load
