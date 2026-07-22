@@ -7,6 +7,8 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
+  // CORREÇÃO RENDER: polling primeiro para compatibilidade
+  transports: ['polling', 'websocket'],
   cors: { origin: "*" },
   pingTimeout: 60000,
   pingInterval: 25000
