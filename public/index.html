@@ -224,7 +224,7 @@ var SERVER_URL = window.location.protocol + '//' + window.location.host;
 document.getElementById('serverInfo').textContent = 'Host: ' + window.location.host;
 
 var socket = io(SERVER_URL, {
-  transports: ['websocket', 'polling'],
+  transports: ['polling', 'websocket'],
   reconnection: true,
   reconnectionAttempts: 10,
   reconnectionDelay: 1000,
