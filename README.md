@@ -1,4 +1,4 @@
-[README.md](https://github.com/user-attachments/files/30284931/README.md)
+
 # AETHERMOOR MMO - v6 Final
 
 ## O que foi corrigido nesta versão
