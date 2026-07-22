@@ -72,9 +72,9 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 .combat-overlay.active{display:flex}
 .combat-box{background:var(--panel);border:1px solid var(--danger);border-radius:10px;padding:20px;width:350px;text-align:center}
 .combat-box h3{color:var(--danger);margin:0 0 10px}
-.combat-log{height:150px;overflow-y:auto;font-size:11px;background:#0d1117;border-radius:5px;padding:8px;margin:10px 0;text-align:left}
+.combat-log{height:120px;overflow-y:auto;font-size:11px;background:#0d1117;border-radius:5px;padding:6px;margin:8px 0;text-align:left}
 .hidden{display:none!important}
-.connection-status{position:fixed;top:10px;right:10px;padding:5px 10px;border-radius:5px;font-size:11px;z-index:300}
+.connection-status{position:fixed;top:10px;right:10px;padding:4px 8px;border-radius:4px;font-size:10px;z-index:300}
 .status-online{background:rgba(63,185,80,0.2);color:var(--success);border:1px solid var(--success)}
 .status-offline{background:rgba(248,81,73,0.2);color:var(--danger);border:1px solid var(--danger)}
 .status-connecting{background:rgba(217,179,65,0.2);color:var(--gold);border:1px solid var(--gold)}
@@ -101,7 +101,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 </div>
 </div>
 <button class="btn btn-success" onclick="startGame()" style="margin-top:5px">🎮 ENTRAR NO MUNDO</button>
-<p style="color:var(--muted);font-size:10px;margin-top:8px">Servidor: <span id="serverUrl">localhost:3000</span></p>
+<p style="color:var(--muted);font-size:10px;margin-top:6px" id="serverInfo">Servidor: detectando...</p>
 </div>
 </div>
 
@@ -116,9 +116,8 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 <div id="combatOverlay" class="combat-overlay">
 <div class="combat-box">
 <h3>⚔️ COMBATE EM ANDAMENTO</h3>
-<div id="combatVs" style="font-size:13px;color:var(--text)"></div>
+<div id="combatVs" style="font-size:12px;color:var(--text)"></div>
 <div class="combat-log" id="combatLogBox"></div>
-<button class="btn btn-danger" onclick="forfeitCombat()" style="margin-top:5px">🏳️ Desistir (Morrer)</button>
 </div>
 </div>
 
@@ -216,15 +215,21 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 </div>
 
 <script>
-// ==================== SOCKET.IO CLIENTE ====================
-const socket = io();
-let player = null;
-let selectedClass = 'warrior';
-let nearbyPlayers = [];
-let inCombat = false;
-let combatLog = [];
+// ==================== CONEXÃO SOCKET.IO ====================
+// CORREÇÃO: Conecta automaticamente ao host atual
+var socket = io(window.location.origin, {
+  transports: ['websocket', 'polling'],
+  reconnection: true,
+  reconnectionAttempts: 5
+});
 
-const ITEMS = {
+var player = null;
+var selectedClass = 'warrior';
+var nearbyPlayers = [];
+var inCombat = false;
+var combatLog = [];
+
+var ITEMS = {
   espada_madeira: { n: 'Espada Madeira', i: '🗡️' },
   espada_ferro: { n: 'Espada Ferro', i: '⚔️' },
   espada_aco: { n: 'Espada Aço', i: '🗡️' },
@@ -242,13 +247,16 @@ const ITEMS = {
   pocao_grande: { n: 'Poção Grande', i: '🧪' }
 };
 
-const MAP_LAYOUT = [
+var MAP_LAYOUT = [
   ['pvp','pvp','pvp','pvp','pvp'],
   ['pvp','bank','bank','pvp','pvp'],
   ['pvp','bank','bank','pvp','pvp'],
   ['pvp','pvp','pvp','pvp','pvp'],
   ['pvp','pvp','pvp','pvp','pvp']
 ];
+
+// Mostrar servidor detectado
+document.getElementById('serverInfo').textContent = 'Servidor: ' + window.location.host;
 
 // Conexão
 socket.on('connect', function() {
@@ -261,8 +269,9 @@ socket.on('disconnect', function() {
   log('Desconectado do servidor!', 'death');
 });
 
-socket.on('connect_error', function() {
-  updateStatus('offline', '🔴 Erro de conexão');
+socket.on('connect_error', function(err) {
+  updateStatus('offline', '🔴 Erro: ' + (err.message || 'falha na conexão'));
+  log('Erro de conexão: ' + (err.message || 'servidor indisponível'), 'death');
 });
 
 function updateStatus(type, text) {
@@ -281,6 +290,10 @@ function selectClass(el) {
 }
 
 function startGame() {
+  if (!socket.connected) {
+    alert('Servidor não conectado! Aguarde ou recarregue a página.');
+    return;
+  }
   var name = (document.getElementById('playerName').value || '').trim() || 'Herói';
   socket.emit('createPlayer', { name: name, cls: selectedClass });
 }
@@ -290,7 +303,6 @@ socket.on('playerCreated', function(data) {
   document.getElementById('loginModal').classList.remove('active');
   document.getElementById('gameContainer').style.display = 'block';
   document.getElementById('charName').textContent = player.name;
-  document.getElementById('serverUrl').textContent = window.location.host;
   updateUI();
   renderMap();
   renderGroundItems(data.groundItems);
@@ -365,13 +377,13 @@ socket.on('bankUpdated', function(data) {
 socket.on('healed', function(data) {
   player.hp = data.hp;
   updateUI();
-  log('🧪 +'+data.amount+' HP!', 'info');
+  log('🧪 +' + data.amount + ' HP!', 'info');
 });
 
 socket.on('manaRestored', function(data) {
   player.mana = data.mana;
   updateUI();
-  log('💧 +'+data.amount+' Mana!', 'info');
+  log('💧 +' + data.amount + ' Mana!', 'info');
 });
 
 socket.on('rested', function(data) {
@@ -382,7 +394,7 @@ socket.on('rested', function(data) {
 });
 
 socket.on('levelUp', function(data) {
-  log('🎉 LEVEL '+data.lvl+'!', 'info');
+  log('🎉 LEVEL ' + data.lvl + '!', 'info');
 });
 
 // Combate
@@ -400,16 +412,10 @@ socket.on('combatStarted', function(data) {
 socket.on('combatLog', function(data) {
   combatLog.push(data);
   renderCombatLog();
-
   var msg = data.attacker + ' → ' + data.defender + ': ' + data.dmg + ' dano' + (data.crit ? ' 💥' : '');
   log(msg, data.type === 'attack' ? 'combat' : 'pvp');
-
-  // Atualizar HP do alvo se for jogador próximo
   var target = nearbyPlayers.find(function(p) { return p.name === data.defender; });
-  if (target) {
-    target.hp = data.defenderHp;
-    renderNearbyPlayers();
-  }
+  if (target) { target.hp = data.defenderHp; renderNearbyPlayers(); }
 });
 
 socket.on('combatWon', function(data) {
@@ -426,18 +432,26 @@ socket.on('died', function(data) {
   inCombat = false;
   player.hp = 0;
   document.getElementById('combatOverlay').classList.remove('active');
-
   var dn = data.drops.map(function(d) { return d.icon + ' ' + d.name; }).join(', ');
   document.getElementById('deathMessage').textContent = data.killer + ' te matou...';
   document.getElementById('droppedItems').textContent = data.drops.length > 0 ? 'Perdeu: ' + dn : 'Sem itens para perder.';
   document.getElementById('respawnScreen').classList.add('active');
-
   log('💀 VOCÊ MORREU! Matou: ' + data.killer, 'death');
   updateUI();
 });
 
 socket.on('playerDied', function(data) {
   log('💀 ' + data.name + ' foi morto por ' + data.killer + '!', 'death');
+});
+
+socket.on('respawned', function(data) {
+  player.pos = data.pos;
+  player.hp = data.hp;
+  player.mana = data.mana;
+  document.getElementById('respawnScreen').classList.remove('active');
+  log('🌟 Ressurgiu no Banco!', 'info');
+  updateUI();
+  renderMap();
 });
 
 socket.on('error', function(msg) {
@@ -465,10 +479,8 @@ function rest() {
 function openCombatMenu() {
   if (inCombat) return;
   if (nearbyPlayers.length === 0) { log('Ninguém por perto!', 'system'); return; }
-
   var panel = document.getElementById('combatPanel');
   if (panel) panel.style.display = 'block';
-
   var html = nearbyPlayers.map(function(t) {
     var pct = (t.hp / t.hpMax) * 100;
     return '<div class="combat-target" onclick="attackPlayer('' + t.id + '')">' +
@@ -478,7 +490,6 @@ function openCombatMenu() {
       '<span style="font-size:9px">' + t.hp + '/' + t.hpMax + '</span>' +
       '</div>';
   }).join('');
-
   var te = document.getElementById('combatTargets');
   if (te) te.innerHTML = html;
 }
@@ -492,17 +503,6 @@ function attackPlayer(targetId) {
   closeCombatMenu();
   socket.emit('attack', { targetId: targetId });
 }
-
-function forfeitCombat() {
-  socket.emit('forfeit');
-}
-
-socket.on('forfeitAccepted', function() {
-  inCombat = false;
-  document.getElementById('combatOverlay').classList.remove('active');
-  log('🏳️ Você desistiu do combate!', 'system');
-  updateUI();
-});
 
 function openBank() {
   var panel = document.getElementById('bankPanel');
@@ -531,27 +531,14 @@ function respawn() {
   socket.emit('respawn');
 }
 
-socket.on('respawned', function(data) {
-  player.pos = data.pos;
-  player.hp = data.hp;
-  player.mana = data.mana;
-  document.getElementById('respawnScreen').classList.remove('active');
-  log('🌟 Ressurgiu no Banco!', 'info');
-  updateUI();
-  renderMap();
-});
-
 // ==================== RENDERIZAÇÃO ====================
 function updateUI() {
   if (!player) return;
-
-  var cl = document.getElementById('charLvl');
-  var ht = document.getElementById('hpText');
-  var hb = document.getElementById('hpBar');
-  var mt = document.getElementById('manaText');
-  var mb = document.getElementById('manaBar');
-  var xt = document.getElementById('xpText');
-  var xb = document.getElementById('xpBar');
+  var cl = document.getElementById('charLvl'), ht = document.getElementById('hpText'), hb = document.getElementById('hpBar');
+  var mt = document.getElementById('manaText'), mb = document.getElementById('manaBar');
+  var xt = document.getElementById('xpText'), xb = document.getElementById('xpBar');
+  var sd = document.getElementById('statDmg'), sf = document.getElementById('statDef'), ss = document.getElementById('statSpd');
+  var sg = document.getElementById('statGold'), sk = document.getElementById('statKills'), sdt = document.getElementById('statDeaths');
 
   if (cl) cl.textContent = player.lvl;
   if (ht) ht.textContent = player.hp + '/' + player.hpMax;
@@ -560,15 +547,19 @@ function updateUI() {
   if (mb) mb.style.width = ((player.mana / player.manaMax) * 100) + '%';
   if (xt) xt.textContent = player.xp + '/' + player.xpNext;
   if (xb) xb.style.width = ((player.xp / player.xpNext) * 100) + '%';
+  if (sd) sd.textContent = player.stats ? player.stats.dmg : 10;
+  if (sf) sf.textContent = player.stats ? player.stats.def : 5;
+  if (ss) ss.textContent = player.stats ? player.stats.spd : 10;
+  if (sg) sg.textContent = player.gold || 0;
+  if (sk) sk.textContent = player.kills || 0;
+  if (sdt) sdt.textContent = player.deaths || 0;
 
   var isBank = player.pos.x >= 1 && player.pos.x <= 2 && player.pos.y >= 1 && player.pos.y <= 2;
   var zb = isBank ? '<span class="zone-badge zone-safe">🏦 SEGURO</span>' : '<span class="zone-badge zone-pvp">⚔️ PvP</span>';
   var zi = document.getElementById('zoneInfo');
   if (zi) zi.innerHTML = (isBank ? 'Banco' : 'Zona PvP') + ' ' + zb;
 
-  var br = document.getElementById('btnRest');
-  var ba = document.getElementById('btnAttack');
-  var bb = document.getElementById('btnBank');
+  var br = document.getElementById('btnRest'), ba = document.getElementById('btnAttack'), bb = document.getElementById('btnBank');
   if (br) br.disabled = inCombat || !isBank;
   if (ba) ba.disabled = inCombat || isBank;
   if (bb) bb.disabled = inCombat || !isBank;
@@ -578,9 +569,7 @@ function updateUI() {
 }
 
 function updateStats(stats) {
-  var sd = document.getElementById('statDmg');
-  var sf = document.getElementById('statDef');
-  var ss = document.getElementById('statSpd');
+  var sd = document.getElementById('statDmg'), sf = document.getElementById('statDef'), ss = document.getElementById('statSpd');
   if (sd) sd.textContent = stats.dmg;
   if (sf) sf.textContent = stats.def;
   if (ss) ss.textContent = stats.spd;
