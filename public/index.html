@@ -101,7 +101,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 </div>
 </div>
 <button class="btn btn-success" onclick="startGame()" style="margin-top:5px">🎮 ENTRAR NO MUNDO</button>
-<p style="color:var(--muted);font-size:10px;margin-top:6px" id="serverInfo">Servidor: detectando...</p>
+<p style="color:var(--muted);font-size:10px;margin-top:6px" id="serverInfo">Host: detectando...</p>
 </div>
 </div>
 
@@ -215,12 +215,20 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 </div>
 
 <script>
-// ==================== CONEXÃO SOCKET.IO ====================
-// CORREÇÃO: Conecta automaticamente ao host atual
-var socket = io(window.location.origin, {
+// ==================== CONEXÃO SOCKET.IO - CORREÇÃO RENDER ====================
+// O Render usa porta 10000 interna, mas externamente é 443 (HTTPS)
+// Forçamos conexão no host atual SEM especificar porta
+
+var SERVER_URL = window.location.protocol + '//' + window.location.host;
+
+document.getElementById('serverInfo').textContent = 'Host: ' + window.location.host;
+
+var socket = io(SERVER_URL, {
   transports: ['websocket', 'polling'],
   reconnection: true,
-  reconnectionAttempts: 5
+  reconnectionAttempts: 10,
+  reconnectionDelay: 1000,
+  timeout: 20000
 });
 
 var player = null;
@@ -255,9 +263,6 @@ var MAP_LAYOUT = [
   ['pvp','pvp','pvp','pvp','pvp']
 ];
 
-// Mostrar servidor detectado
-document.getElementById('serverInfo').textContent = 'Servidor: ' + window.location.host;
-
 // Conexão
 socket.on('connect', function() {
   updateStatus('online', '🟢 Online');
@@ -270,8 +275,9 @@ socket.on('disconnect', function() {
 });
 
 socket.on('connect_error', function(err) {
-  updateStatus('offline', '🔴 Erro: ' + (err.message || 'falha na conexão'));
+  updateStatus('offline', '🔴 Erro: ' + (err.message || 'falha'));
   log('Erro de conexão: ' + (err.message || 'servidor indisponível'), 'death');
+  console.error('Socket error:', err);
 });
 
 function updateStatus(type, text) {
@@ -291,7 +297,7 @@ function selectClass(el) {
 
 function startGame() {
   if (!socket.connected) {
-    alert('Servidor não conectado! Aguarde ou recarregue a página.');
+    alert('Servidor não conectado! Status: ' + (socket.connected ? 'OK' : 'OFFLINE'));
     return;
   }
   var name = (document.getElementById('playerName').value || '').trim() || 'Herói';
@@ -308,7 +314,7 @@ socket.on('playerCreated', function(data) {
   renderGroundItems(data.groundItems);
   log('Bem-vindo a Aethermoor, ' + player.name + '!', 'system');
   log('🏦 Você nasceu no Banco. Aqui é SEGURO.', 'info');
-  log('⚔️ Fora do Banco é PvP TOTAL com jogadores REAIS!', 'pvp');
+  log('⚔️ Fora do Banco é PvP TOTAL!', 'pvp');
   log('💀 Se MORRER, perde TUDO exceto itens no BANCO!', 'death');
 });
 
