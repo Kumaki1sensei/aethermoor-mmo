@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aethermoor MMO v11</title>
+<title>Aethermoor MMO v11 Fix</title>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -71,6 +71,23 @@
   .tile-players { position: absolute; bottom: 2px; right: 2px; font-size: 0.7em; background: #ff4444; color: #fff; padding: 1px 4px; border-radius: 4px; }
   .tile-loot { position: absolute; top: 2px; left: 2px; font-size: 0.7em; background: #ffaa00; color: #000; padding: 1px 4px; border-radius: 4px; }
   .tile-coords { position: absolute; top: 2px; right: 2px; font-size: 0.6em; color: #555; }
+
+  .tile-content {
+    font-size: 1.8em;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .tile-player-icon {
+    font-size: 1.8em;
+    cursor: crosshair;
+    z-index: 3;
+    pointer-events: auto;
+    padding: 2px;
+    border-radius: 4px;
+  }
+  .tile-player-icon:hover {
+    background: rgba(255,170,0,0.2);
+  }
 
   .right-panel { display: flex; flex-direction: column; gap: 10px; width: 260px; min-width: 260px; }
 
@@ -167,8 +184,8 @@
 </head>
 <body>
 
-<h1>⚔️ Aethermoor MMO</h1>
-<div class="subtitle">v11 — Login & Save System</div>
+<h1>Aethermoor MMO</h1>
+<div class="subtitle">v11 Fix - Movimento Corrigido</div>
 
 <div id="loginScreen">
   <h2>Entrar no Mundo</h2>
@@ -432,6 +449,9 @@ function updateUI() {
   if (!inBank) document.getElementById('bankPanel').style.display = 'none';
 }
 
+// ============================================================
+// RENDER MAP - FIX DO MOVIMENTO
+// ============================================================
 function renderMap() {
   if (!player) return;
   const grid = document.getElementById('mapGrid');
@@ -449,26 +469,24 @@ function renderMap() {
       const playersHere = Object.values(otherPlayers).filter(p => p.x === x && p.y === y);
       const isMe = player.x === x && player.y === y;
 
+      // Conteudo base do tile (icone do ambiente)
       let content = '';
       if (isMe) content += '\uD83D\uDC64';
-      else if (playersHere.length > 0) content += '\uD83D\uDC65';
       else if (isBank) content += '\uD83C\uDFE6';
       else content += '\u2694';
 
-      tile.innerHTML = content;
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'tile-content';
+      contentDiv.textContent = content;
+      tile.appendChild(contentDiv);
 
+      // Coordenadas
       const coords = document.createElement('span');
       coords.className = 'tile-coords';
       coords.textContent = x + ',' + y;
       tile.appendChild(coords);
 
-      if (playersHere.length > 0 && !isMe) {
-        const pc = document.createElement('span');
-        pc.className = 'tile-players';
-        pc.textContent = playersHere.length;
-        tile.appendChild(pc);
-      }
-
+      // Loot badge
       if (tileData && tileData.items && tileData.items.length > 0) {
         const lc = document.createElement('span');
         lc.className = 'tile-loot';
@@ -476,25 +494,40 @@ function renderMap() {
         tile.appendChild(lc);
       }
 
-      if (!isMe) {
-        tile.onclick = (function(cx, cy) {
-          return function() {
-            const dx = Math.abs(cx - player.x);
-            const dy = Math.abs(cy - player.y);
-            if (dx + dy === 1) { socket.emit('move', { x: cx, y: cy }); }
-          };
-        })(x, y);
+      // Jogadores no tile - icone clicavel separado
+      if (playersHere.length > 0 && !isMe) {
+        const pc = document.createElement('span');
+        pc.className = 'tile-players';
+        pc.textContent = playersHere.length;
+        tile.appendChild(pc);
+
+        // Icone do jogador como elemento separado clicavel
+        const playerIcon = document.createElement('div');
+        playerIcon.className = 'tile-player-icon';
+        playerIcon.textContent = '\uD83D\uDC65';
+        playerIcon.title = playersHere.map(p => p.name + ' (Lv.' + (p.level || 1) + ')').join(', ');
+        playerIcon.onclick = function(e) {
+          e.stopPropagation(); // Impedir que o clique chegue ao tile
+          selectedTarget = playersHere[0].id;
+          document.getElementById('btnAttack').style.display = 'inline-block';
+          document.getElementById('btnAttack').textContent = 'Atacar ' + playersHere[0].name;
+          log('Alvo: ' + playersHere[0].name + ' (Lv.' + (playersHere[0].level || 1) + ')');
+        };
+        tile.appendChild(playerIcon);
       }
 
-      if (playersHere.length > 0 && !isMe) {
-        tile.onclick = (function(cx, cy, targets) {
-          return function() {
-            selectedTarget = targets[0].id;
-            document.getElementById('btnAttack').style.display = 'inline-block';
-            document.getElementById('btnAttack').textContent = 'Atacar ' + targets[0].name;
-            log('Alvo: ' + targets[0].name + ' (Lv.' + (targets[0].level || 1) + ')');
-          };
-        })(x, y, playersHere);
+      // CLICK NO TILE = MOVER (sempre funciona, exceto no proprio tile)
+      if (!isMe) {
+        tile.onclick = function() {
+          const dx = Math.abs(x - player.x);
+          const dy = Math.abs(y - player.y);
+          if (dx + dy === 1) {
+            socket.emit('move', { x: x, y: y });
+            log('Movendo para ' + x + ',' + y);
+          } else {
+            log('Muito longe! So podes mover 1 tile.');
+          }
+        };
       }
 
       grid.appendChild(tile);
