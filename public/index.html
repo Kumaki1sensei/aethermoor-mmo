@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aethermoor MMO - Multiplayer</title>
-<script src="/socket.io/socket.io.js"></script>
 <style>
 :root{--bg:#0d1117;--panel:#161b22;--border:#30363d;--accent:#58a6ff;--danger:#f85149;--success:#3fb950;--warning:#d29922;--text:#c9d1d9;--muted:#8b949e;--gold:#e3b341}
 *{box-sizing:border-box}
@@ -72,9 +71,9 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 .combat-overlay.active{display:flex}
 .combat-box{background:var(--panel);border:1px solid var(--danger);border-radius:10px;padding:20px;width:350px;text-align:center}
 .combat-box h3{color:var(--danger);margin:0 0 10px}
-.combat-log{height:120px;overflow-y:auto;font-size:11px;background:#0d1117;border-radius:5px;padding:6px;margin:8px 0;text-align:left}
+.combat-log{height:120px;overflow-y:auto;font-size:11px;background:#0d1117;border-radius:5px;padding:8px;margin:10px 0;text-align:left}
 .hidden{display:none!important}
-.connection-status{position:fixed;top:10px;right:10px;padding:4px 8px;border-radius:4px;font-size:10px;z-index:300}
+.connection-status{position:fixed;top:10px;right:10px;padding:5px 10px;border-radius:5px;font-size:11px;z-index:300}
 .status-online{background:rgba(63,185,80,0.2);color:var(--success);border:1px solid var(--success)}
 .status-offline{background:rgba(248,81,73,0.2);color:var(--danger);border:1px solid var(--danger)}
 .status-connecting{background:rgba(217,179,65,0.2);color:var(--gold);border:1px solid var(--gold)}
@@ -100,600 +99,470 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;ma
 <span class="icon">🗡️</span><strong>Ladino</strong><div style="color:var(--muted);font-size:8px">Veloc+ Crit+</div>
 </div>
 </div>
-<button class="btn btn-success" onclick="startGame()" style="margin-top:5px">🎮 ENTRAR NO MUNDO</button>
-<p style="color:var(--muted);font-size:10px;margin-top:6px" id="serverInfo">Host: detectando...</p>
+<button class="btn btn-success" onclick="startGame()" style="font-size:14px;padding:10px">⚔️ ENTRAR NO MUNDO</button>
+<p id="loginError" style="color:var(--danger);font-size:11px;margin:6px 0 0;display:none"></p>
+</div>
+</div>
+
+<div id="gameUI" class="container hidden">
+<div class="header">
+<h1>⚔️ AETHERMOOR MMO</h1>
+<p id="headerInfo">Carregando...</p>
+</div>
+
+<div class="grid">
+<div class="panel">
+<h3>📊 Status</h3>
+<div class="stat-row"><span>❤️ HP</span><span id="hpText">100/100</span></div>
+<div class="stat-bar-bg"><div id="hpBar" class="stat-bar-fill hp-fill" style="width:100%"></div></div>
+<div class="stat-row"><span>💧 Mana</span><span id="manaText">50/50</span></div>
+<div class="stat-bar-bg"><div id="manaBar" class="stat-bar-fill mana-fill" style="width:100%"></div></div>
+<div class="stat-row"><span>⭐ XP</span><span id="xpText">0/100</span></div>
+<div class="stat-bar-bg"><div id="xpBar" class="stat-bar-fill xp-fill" style="width:0%"></div></div>
+<div class="stat-row"><span>🛡️ Defesa</span><span id="defText">0</span></div>
+<div class="stat-row"><span>⚔️ Dano</span><span id="dmgText">0</span></div>
+<div class="stat-row"><span>⚡ Velocidade</span><span id="spdText">0</span></div>
+<div class="stat-row"><span>💰 Ouro</span><span id="goldText">50</span></div>
+<div class="stat-row"><span>⚔️ Kills</span><span id="killsText">0</span></div>
+<div class="stat-row"><span>💀 Deaths</span><span id="deathsText">0</span></div>
+<br>
+<h3>🎒 Inventário</h3>
+<div id="inventoryGrid" class="inventory-grid"></div>
+<br>
+<h3>🏦 Banco</h3>
+<div id="bankGrid" class="inventory-grid"></div>
+<button class="btn btn-gold" onclick="depositAll()">📥 Depositar Tudo</button>
+<button class="btn btn-gold" onclick="withdrawAll()">📤 Retirar Tudo</button>
+</div>
+
+<div class="panel">
+<h3>📜 Log</h3>
+<div id="gameLog" class="log"></div>
+<h3>🗺️ Mapa</h3>
+<div id="miniMap" class="mini-map"></div>
+<p id="zoneInfo" style="text-align:center;margin:5px 0;font-size:11px"><span class="zone-badge zone-safe">🏦 BANCO - Seguro</span></p>
+<br>
+<h3>👥 Jogadores Próximos</h3>
+<div id="nearbyPlayers"></div>
+<br>
+<h3>📦 Itens no Chão</h3>
+<div id="groundItems"></div>
+</div>
+
+<div class="panel">
+<h3>⚔️ Ações</h3>
+<button class="btn btn-success" onclick="rest()" id="btnRest">😴 Descansar</button>
+<button class="btn btn-danger" onclick="leaveGame()">🚪 Sair</button>
+<br>
+<h3>📈 Ranking</h3>
+<div id="ranking" style="font-size:10px"></div>
+</div>
 </div>
 </div>
 
 <div id="respawnScreen" class="respawn-screen">
 <h1>💀 VOCÊ MORREU!</h1>
-<p id="deathMessage">Você foi derrotado...</p>
-<div class="dropped-items" id="droppedItems"></div>
-<p style="color:var(--muted);font-size:11px">Você perdeu TODOS os itens equipados e do inventário!</p>
-<button class="btn btn-success" onclick="respawn()" style="width:180px;margin-top:10px">🌟 RESSURGIR NO BANCO</button>
+<p>Você foi derrotado e perdeu TODOS os seus itens.</p>
+<div id="droppedItems" class="dropped-items"></div>
+<button class="btn btn-success" onclick="respawn()" style="width:200px;font-size:14px">🔄 Ressurgir no Banco</button>
 </div>
 
 <div id="combatOverlay" class="combat-overlay">
 <div class="combat-box">
-<h3>⚔️ COMBATE EM ANDAMENTO</h3>
-<div id="combatVs" style="font-size:12px;color:var(--text)"></div>
-<div class="combat-log" id="combatLogBox"></div>
-</div>
-</div>
-
-<div class="container" id="gameContainer" style="display:none">
-<div class="header">
-<h1>⚔️ AETHERMOOR</h1>
-<p id="zoneInfo">Carregando...</p>
-</div>
-<div class="grid">
-<div>
-<div class="panel">
-<h3>👤 <span id="charName">Herói</span> <span style="color:var(--muted);font-size:10px">Lv.<span id="charLvl">1</span></span></h3>
-<div class="stat-row"><span>❤️ Vida</span><span id="hpText">100/100</span></div>
-<div class="stat-bar-bg"><div class="stat-bar-fill hp-fill" id="hpBar" style="width:100%"></div></div>
-<div class="stat-row" style="margin-top:3px"><span>✨ Mana</span><span id="manaText">50/50</span></div>
-<div class="stat-bar-bg"><div class="stat-bar-fill mana-fill" id="manaBar" style="width:100%"></div></div>
-<div class="stat-row" style="margin-top:3px"><span>⭐ XP</span><span id="xpText">0/100</span></div>
-<div class="stat-bar-bg"><div class="stat-bar-fill xp-fill" id="xpBar" style="width:0%"></div></div>
-<div style="margin-top:6px;border-top:1px solid var(--border);padding-top:5px">
-<div class="stat-row"><span>🗡️ Dano</span><span id="statDmg">10</span></div>
-<div class="stat-row"><span>🛡️ Defesa</span><span id="statDef">5</span></div>
-<div class="stat-row"><span>⚡ Veloc</span><span id="statSpd">10</span></div>
-<div class="stat-row"><span>💰 Ouro</span><span id="statGold" style="color:var(--gold)">0</span></div>
-<div class="stat-row"><span>⚔️ Kills</span><span id="statKills">0</span></div>
-<div class="stat-row"><span>💀 Mortes</span><span id="statDeaths">0</span></div>
-</div>
-</div>
-<div class="panel" style="margin-top:6px">
-<h3>🎒 Inventário</h3>
-<div class="inventory-grid" id="inventory"></div>
-<div style="margin-top:4px;font-size:9px;color:var(--muted)">Clique para equipar/usar</div>
-</div>
-<div class="panel" style="margin-top:6px">
-<h3>🗺️ Mapa</h3>
-<div class="mini-map" id="miniMap"></div>
-<div style="margin-top:4px;font-size:9px;display:flex;gap:8px;justify-content:center">
-<span><span style="color:var(--success)">■</span> Banco</span>
-<span><span style="color:var(--danger)">■</span> PvP</span>
-</div>
-</div>
-</div>
-<div>
-<div class="panel">
-<h3>📜 Aventura</h3>
-<div class="log" id="gameLog"></div>
-</div>
-<div class="panel" style="margin-top:6px">
-<h3>⚔️ Ações</h3>
-<button class="btn btn-success" id="btnRest" onclick="rest()">🏕️ Descansar</button>
-<button class="btn btn-danger" id="btnAttack" onclick="openCombatMenu()" disabled>⚔️ Atacar Jogador</button>
-<button class="btn btn-gold" id="btnBank" onclick="openBank()" disabled>🏦 Acessar Banco</button>
-</div>
-<div class="panel" style="margin-top:6px;display:none" id="combatPanel">
-<h3>🎯 Alvos Próximos</h3>
-<div id="combatTargets"></div>
-<button class="btn" onclick="closeCombatMenu()" style="margin-top:3px">❌ Cancelar</button>
-</div>
-<div class="panel" style="margin-top:6px;display:none" id="bankPanel">
-<h3>🏦 Banco (Seguro)</h3>
-<p style="font-size:10px;color:var(--muted);margin:0 0 5px">Itens aqui ficam seguros mesmo se morrer!</p>
-<div id="bankStorage"></div>
-<div style="margin-top:4px;display:flex;gap:3px">
-<button class="btn" onclick="depositAll()" style="flex:1;font-size:10px">📥 Depositar Tudo</button>
-<button class="btn" onclick="withdrawAll()" style="flex:1;font-size:10px">📤 Retirar Tudo</button>
-</div>
-<button class="btn" onclick="closeBank()" style="margin-top:3px">❌ Fechar</button>
-</div>
-<div class="panel" style="margin-top:6px">
-<h3>📦 Itens no Chão</h3>
-<div class="ground-items" id="groundItems"><p style="color:var(--muted);font-size:10px;text-align:center;margin:0">Nenhum item.</p></div>
-</div>
-</div>
-<div>
-<div class="panel">
-<h3>👥 Jogadores na Zona <span id="playerCount" style="color:var(--muted)">(0)</span></h3>
-<div class="players-list" id="playersList"></div>
-</div>
-<div class="panel" style="margin-top:6px">
-<h3>📊 Ranking Global</h3>
-<div id="leaderboard"></div>
-</div>
-<div class="panel" style="margin-top:6px">
-<h3>💡 Como Jogar</h3>
-<div style="font-size:10px;color:var(--muted);line-height:1.5">
-• Equipe itens no inventário<br>
-• Pegue itens do chão<br>
-• Guarde no Banco (seguro)<br>
-• Fora do Banco = PvP!<br>
-• Morrer = perde TUDO<br>
-• Colegas = jogadores reais!
-</div>
-</div>
-</div>
+<h3>⚔️ COMBATE!</h3>
+<p id="combatTargetName" style="color:var(--accent);font-size:14px;margin:0"></p>
+<div id="combatLog" class="combat-log"></div>
 </div>
 </div>
 
 <script>
-// ==================== CONEXÃO SOCKET.IO - CORREÇÃO RENDER ====================
-// O Render usa porta 10000 interna, mas externamente é 443 (HTTPS)
-// Forçamos conexão no host atual SEM especificar porta
+// ===== SOCKET.IO CLIENT - INLINE (no external dependency) =====
+// We use a lightweight Socket.IO client loaded from CDN, with fallback
 
-var SERVER_URL = window.location.protocol + '//' + window.location.host;
-
-document.getElementById('serverInfo').textContent = 'Host: ' + window.location.host;
-
-var socket = io(SERVER_URL, {
-  transports: ['polling', 'websocket'],
-  reconnection: true,
-  reconnectionAttempts: 10,
-  reconnectionDelay: 1000,
-  timeout: 20000
-});
-
+var socket = null;
 var player = null;
 var selectedClass = 'warrior';
-var nearbyPlayers = [];
 var inCombat = false;
-var combatLog = [];
-
 var ITEMS = {
-  espada_madeira: { n: 'Espada Madeira', i: '🗡️' },
-  espada_ferro: { n: 'Espada Ferro', i: '⚔️' },
-  espada_aco: { n: 'Espada Aço', i: '🗡️' },
-  adaga: { n: 'Adaga', i: '🗡️' },
-  machado: { n: 'Machado', i: '🪓' },
-  tunica: { n: 'Túnica', i: '👕' },
-  couro: { n: 'Couro', i: '🛡️' },
-  cota: { n: 'Cota Malha', i: '⛓️' },
-  placas: { n: 'Placas', i: '🛡️' },
-  amuleto: { n: 'Amuleto', i: '📿' },
-  anel: { n: 'Anel Força', i: '💍' },
-  botas: { n: 'Botas', i: '👢' },
-  pocao_vida: { n: 'Poção Vida', i: '🧪' },
-  pocao_mana: { n: 'Poção Mana', i: '💧' },
-  pocao_grande: { n: 'Poção Grande', i: '🧪' }
+  espada_madeira:{name:'Espada Madeira',type:'weapon',dmg:3,def:0,icon:'🗡️'},
+  espada_ferro:{name:'Espada Ferro',type:'weapon',dmg:8,def:0,icon:'⚔️'},
+  espada_aco:{name:'Espada Aço',type:'weapon',dmg:15,def:0,icon:'🗡️'},
+  adaga:{name:'Adaga',type:'weapon',dmg:10,def:0,icon:'🗡️'},
+  machado:{name:'Machado',type:'weapon',dmg:20,def:0,icon:'🪓'},
+  tunica:{name:'Túnica',type:'armor',dmg:0,def:2,icon:'👕'},
+  couro:{name:'Couro',type:'armor',dmg:0,def:5,icon:'🛡️'},
+  cota:{name:'Cota Malha',type:'armor',dmg:0,def:10,icon:'⛓️'},
+  placas:{name:'Placas',type:'armor',dmg:0,def:18,icon:'🛡️'},
+  amuleto:{name:'Amuleto',type:'accessory',dmg:2,def:2,icon:'📿'},
+  anel:{name:'Anel Força',type:'accessory',dmg:5,def:0,icon:'💍'},
+  botas:{name:'Botas',type:'accessory',dmg:0,def:1,icon:'👢'},
+  pocao_vida:{name:'Poção Vida',type:'consumable',heal:30,icon:'🧪'},
+  pocao_mana:{name:'Poção Mana',type:'consumable',mana:30,icon:'💧'},
+  pocao_grande:{name:'Poção Grande',type:'consumable',heal:60,icon:'🧪'}
 };
 
-var MAP_LAYOUT = [
-  ['pvp','pvp','pvp','pvp','pvp'],
-  ['pvp','bank','bank','pvp','pvp'],
-  ['pvp','bank','bank','pvp','pvp'],
-  ['pvp','pvp','pvp','pvp','pvp'],
-  ['pvp','pvp','pvp','pvp','pvp']
-];
-
-// Conexão
-socket.on('connect', function() {
-  updateStatus('online', '🟢 Online');
-  log('Conectado ao servidor!', 'system');
-});
-
-socket.on('disconnect', function() {
-  updateStatus('offline', '🔴 Desconectado');
-  log('Desconectado do servidor!', 'death');
-});
-
-socket.on('connect_error', function(err) {
-  updateStatus('offline', '🔴 Erro: ' + (err.message || 'falha'));
-  log('Erro de conexão: ' + (err.message || 'servidor indisponível'), 'death');
-  console.error('Socket error:', err);
-});
-
-function updateStatus(type, text) {
-  var el = document.getElementById('connectionStatus');
-  if (el) {
-    el.className = 'connection-status status-' + type;
-    el.textContent = text;
-  }
-}
-
-// ==================== LOGIN ====================
-function selectClass(el) {
-  document.querySelectorAll('.class-option').forEach(function(o) { o.classList.remove('selected'); });
+function selectClass(el){
+  document.querySelectorAll('.class-option').forEach(c=>c.classList.remove('selected'));
   el.classList.add('selected');
-  selectedClass = el.dataset.class;
+  selectedClass=el.dataset.class;
 }
 
-function startGame() {
-  if (!socket.connected) {
-    alert('Servidor não conectado! Status: ' + (socket.connected ? 'OK' : 'OFFLINE'));
+function log(msg,type='system'){
+  const d=document.getElementById('gameLog');
+  const e=document.createElement('div');
+  e.className='log-entry log-'+type;
+  e.textContent='['+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'] '+msg;
+  d.appendChild(e);d.scrollTop=d.scrollHeight;
+}
+
+function setStatus(status,msg){
+  const el=document.getElementById('connectionStatus');
+  el.className='connection-status status-'+status;
+  el.textContent=msg;
+}
+
+function initSocket(){
+  setStatus('connecting','🟡 Conectando...');
+
+  // Load Socket.IO client from CDN then connect
+  var script=document.createElement('script');
+  script.src='https://cdn.socket.io/4.7.2/socket.io.min.js';
+  script.onload=function(){
+    var SERVER_URL=window.location.protocol+'//'+window.location.host;
+    socket=io(SERVER_URL,{
+      transports:['polling','websocket'],
+      reconnection:true,
+      reconnectionAttempts:10,
+      reconnectionDelay:1000,
+      timeout:20000
+    });
+
+    socket.on('connect',function(){
+      setStatus('online','🟢 Online');
+      log('Conectado ao servidor!','system');
+    });
+
+    socket.on('disconnect',function(){
+      setStatus('offline','🔴 Offline');
+      log('Desconectado do servidor.','system');
+    });
+
+    socket.on('connect_error',function(err){
+      setStatus('connecting','🟡 Reconectando...');
+      log('Erro de conexão: '+err.message,'system');
+    });
+
+    socket.on('playerCreated',function(data){
+      player=data.player;
+      document.getElementById('loginModal').classList.remove('active');
+      document.getElementById('gameUI').classList.remove('hidden');
+      updateUI();
+      renderMap();
+      log('Bem-vindo a Aethermoor, '+player.name+'!','info');
+      log('Você está no Banco. Guarde itens valiosos antes de sair!','info');
+    });
+
+    socket.on('nearbyPlayers',function(list){
+      renderNearby(list);
+    });
+
+    socket.on('groundItems',function(items){
+      renderGround(items);
+    });
+
+    socket.on('groundItemsUpdated',function(items){
+      renderGround(items);
+    });
+
+    socket.on('inventoryUpdated',function(inv){
+      player.inv=inv;
+      renderInventory();
+    });
+
+    socket.on('equipmentUpdated',function(data){
+      player.eq=data.eq;
+      player.inv=data.inv;
+      renderInventory();
+      updateUI();
+    });
+
+    socket.on('bankUpdated',function(data){
+      player.bank=data.bank;
+      player.inv=data.inv;
+      renderBank();
+      renderInventory();
+    });
+
+    socket.on('moved',function(data){
+      player.pos=data.pos;
+      updateUI();
+      renderMap();
+      if(data.isBank){
+        log('Você entrou na Zona do Banco (seguro).','info');
+      }else{
+        log('Você entrou na ZONA PvP! Cuidado!','pvp');
+      }
+    });
+
+    socket.on('combatStarted',function(data){
+      inCombat=true;
+      document.getElementById('combatOverlay').classList.add('active');
+      document.getElementById('combatTargetName').textContent='Vs. '+data.target.name;
+      document.getElementById('combatLog').innerHTML='';
+      log('Combate iniciado contra '+data.target.name+'!','combat');
+    });
+
+    socket.on('combatLog',function(data){
+      var cl=document.getElementById('combatLog');
+      var e=document.createElement('div');
+      if(data.type==='attack'){
+        e.innerHTML='<span style="color:var(--success)">Você atacou '+data.defender+' por '+data.dmg+(data.crit?' 💥CRIT!':'')+'</span>';
+      }else{
+        e.innerHTML='<span style="color:var(--danger)">'+data.attacker+' atacou você por '+data.dmg+(data.crit?' 💥CRIT!':'')+'</span>';
+      }
+      cl.appendChild(e);cl.scrollTop=cl.scrollHeight;
+    });
+
+    socket.on('combatWon',function(data){
+      inCombat=false;
+      document.getElementById('combatOverlay').classList.remove('active');
+      log('Você venceu! +'+data.xp+' XP, +'+data.gold+' ouro.','win');
+      if(data.drops&&data.drops.length){
+        log('Itens dropados: '+data.drops.map(d=>d.icon+' '+d.name).join(', '),'loot');
+      }
+    });
+
+    socket.on('died',function(data){
+      inCombat=false;
+      document.getElementById('combatOverlay').classList.remove('active');
+      document.getElementById('gameUI').classList.add('hidden');
+      document.getElementById('respawnScreen').classList.add('active');
+      document.getElementById('droppedItems').innerHTML='<strong>Itens perdidos:</strong><br>'+
+        data.drops.map(d=>d.icon+' '+d.name).join(' ');
+      log('Você foi derrotado por '+data.killer+'! Perdeu tudo!','death');
+    });
+
+    socket.on('respawned',function(data){
+      player.hp=data.hp;player.mana=data.mana;player.pos=data.pos;
+      player.inCombat=false;
+      document.getElementById('respawnScreen').classList.remove('active');
+      document.getElementById('gameUI').classList.remove('hidden');
+      updateUI();renderMap();
+      log('Você ressurgiu no Banco.','info');
+    });
+
+    socket.on('rested',function(data){
+      player.hp=data.hp;player.mana=data.mana;
+      updateUI();
+      log('Você descansou. HP e Mana recuperados.','info');
+    });
+
+    socket.on('healed',function(data){
+      player.hp=data.hp;
+      updateUI();
+      log('Você usou uma poção. +'+data.amount+' HP.','info');
+    });
+
+    socket.on('manaRestored',function(data){
+      player.mana=data.mana;
+      updateUI();
+      log('Mana restaurada. +'+data.amount+' Mana.','info');
+    });
+
+    socket.on('levelUp',function(data){
+      log('🎉 LEVEL UP! Você alcançou o nível '+data.lvl+'!','win');
+    });
+
+    socket.on('error',function(msg){
+      log('Erro: '+msg,'system');
+    });
+
+    socket.on('playerJoined',function(data){
+      log(data.name+' ('+data.cls+') entrou no mundo.','info');
+    });
+
+    socket.on('playerLeft',function(data){
+      log('Um jogador saiu do mundo.','system');
+    });
+
+    socket.on('playerDied',function(data){
+      log(data.name+' foi morto por '+data.killer+'! '+data.drops+' itens caíram no chão.','death');
+    });
+  };
+
+  script.onerror=function(){
+    setStatus('offline','🔴 Falha ao carregar Socket.IO');
+    document.getElementById('loginError').style.display='block';
+    document.getElementById('loginError').textContent='Erro: Não foi possível carregar o cliente Socket.IO. Tente recarregar a página.';
+  };
+
+  document.head.appendChild(script);
+}
+
+function startGame(){
+  var name=document.getElementById('playerName').value.trim();
+  if(!name){document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent='Digite um nome!';return;}
+  if(!socket||!socket.connected){
+    document.getElementById('loginError').style.display='block';
+    document.getElementById('loginError').textContent='Ainda conectando... Aguarde ou recarregue a página.';
     return;
   }
-  var name = (document.getElementById('playerName').value || '').trim() || 'Herói';
-  socket.emit('createPlayer', { name: name, cls: selectedClass });
+  socket.emit('createPlayer',{name:name,cls:selectedClass});
 }
 
-socket.on('playerCreated', function(data) {
-  player = data.player;
-  document.getElementById('loginModal').classList.remove('active');
-  document.getElementById('gameContainer').style.display = 'block';
-  document.getElementById('charName').textContent = player.name;
-  updateUI();
-  renderMap();
-  renderGroundItems(data.groundItems);
-  log('Bem-vindo a Aethermoor, ' + player.name + '!', 'system');
-  log('🏦 Você nasceu no Banco. Aqui é SEGURO.', 'info');
-  log('⚔️ Fora do Banco é PvP TOTAL!', 'pvp');
-  log('💀 Se MORRER, perde TUDO exceto itens no BANCO!', 'death');
-});
+function updateUI(){
+  if(!player)return;
+  document.getElementById('headerInfo').innerHTML=player.name+' | Nível '+player.lvl+' | Pos: ('+player.pos.x+','+player.pos.y+')';
+  document.getElementById('hpText').textContent=player.hp+'/'+player.hpMax;
+  document.getElementById('hpBar').style.width=(player.hp/player.hpMax*100)+'%';
+  document.getElementById('manaText').textContent=player.mana+'/'+player.manaMax;
+  document.getElementById('manaBar').style.width=(player.mana/player.manaMax*100)+'%';
+  document.getElementById('xpText').textContent=player.xp+'/'+player.xpNext;
+  document.getElementById('xpBar').style.width=(player.xp/player.xpNext*100)+'%';
 
-// ==================== EVENTOS DO SERVIDOR ====================
-socket.on('playerJoined', function(data) {
-  log(data.name + ' entrou no mundo!', 'info');
-});
+  var dmg=0,def=0,spd=0;
+  if(player.cls==='warrior'){dmg=12;def=8;spd=8;}
+  else if(player.cls==='mage'){dmg=18;def=3;spd=10;}
+  else if(player.cls==='rogue'){dmg=15;def=4;spd=16;}
 
-socket.on('playerLeft', function(data) {
-  log('Um jogador saiu.', 'system');
-  nearbyPlayers = nearbyPlayers.filter(function(p) { return p.id !== data.id; });
-  renderNearbyPlayers();
-});
+  if(player.eq&&player.eq.weapon&&ITEMS[player.eq.weapon])dmg+=ITEMS[player.eq.weapon].dmg||0;
+  if(player.eq&&player.eq.armor&&ITEMS[player.eq.armor])def+=ITEMS[player.eq.armor].def||0;
+  if(player.eq&&player.eq.accessory&&ITEMS[player.eq.accessory]){dmg+=ITEMS[player.eq.accessory].dmg||0;def+=ITEMS[player.eq.accessory].def||0;}
 
-socket.on('playerEnteredZone', function(data) {
-  if (data.id === socket.id) return;
-  log(data.name + ' chegou aqui!', 'pvp');
-  nearbyPlayers.push(data);
-  renderNearbyPlayers();
-});
+  document.getElementById('dmgText').textContent=dmg;
+  document.getElementById('defText').textContent=def;
+  document.getElementById('spdText').textContent=spd;
+  document.getElementById('goldText').textContent=player.gold||0;
+  document.getElementById('killsText').textContent=player.kills||0;
+  document.getElementById('deathsText').textContent=player.deaths||0;
 
-socket.on('playerLeftZone', function(data) {
-  nearbyPlayers = nearbyPlayers.filter(function(p) { return p.id !== data.id; });
-  renderNearbyPlayers();
-});
-
-socket.on('nearbyPlayers', function(data) {
-  nearbyPlayers = data;
-  renderNearbyPlayers();
-});
-
-socket.on('moved', function(data) {
-  player.pos = data.pos;
-  updateUI();
-  renderMap();
-  log('Você foi para ' + (data.isBank ? 'o Banco' : 'Zona PvP') + '.', 'info');
-});
-
-socket.on('groundItems', function(data) {
-  renderGroundItems(data);
-});
-
-socket.on('groundItemsUpdated', function(data) {
-  renderGroundItems(data);
-});
-
-socket.on('inventoryUpdated', function(data) {
-  player.inv = data;
-  renderInventory();
-});
-
-socket.on('equipmentUpdated', function(data) {
-  player.eq = data.eq;
-  player.inv = data.inv;
-  renderInventory();
-  updateStats(data.stats);
-});
-
-socket.on('bankUpdated', function(data) {
-  player.bank = data.bank;
-  player.inv = data.inv;
-  renderBank();
-  renderInventory();
-});
-
-socket.on('healed', function(data) {
-  player.hp = data.hp;
-  updateUI();
-  log('🧪 +' + data.amount + ' HP!', 'info');
-});
-
-socket.on('manaRestored', function(data) {
-  player.mana = data.mana;
-  updateUI();
-  log('💧 +' + data.amount + ' Mana!', 'info');
-});
-
-socket.on('rested', function(data) {
-  player.hp = data.hp;
-  player.mana = data.mana;
-  updateUI();
-  log('🏕️ Recuperou HP e Mana!', 'info');
-});
-
-socket.on('levelUp', function(data) {
-  log('🎉 LEVEL ' + data.lvl + '!', 'info');
-});
-
-// Combate
-socket.on('combatStarted', function(data) {
-  inCombat = true;
-  combatLog = [];
-  document.getElementById('combatOverlay').classList.add('active');
-  document.getElementById('combatVs').textContent = data.attacker 
-    ? '⚔️ ' + data.target.name + ' te atacou!' 
-    : '⚔️ Você vs ' + data.target.name;
-  log('⚔️ COMBATE INICIADO!', 'pvp');
-  updateUI();
-});
-
-socket.on('combatLog', function(data) {
-  combatLog.push(data);
-  renderCombatLog();
-  var msg = data.attacker + ' → ' + data.defender + ': ' + data.dmg + ' dano' + (data.crit ? ' 💥' : '');
-  log(msg, data.type === 'attack' ? 'combat' : 'pvp');
-  var target = nearbyPlayers.find(function(p) { return p.name === data.defender; });
-  if (target) { target.hp = data.defenderHp; renderNearbyPlayers(); }
-});
-
-socket.on('combatWon', function(data) {
-  inCombat = false;
-  document.getElementById('combatOverlay').classList.remove('active');
-  log('🏆 Você VENCEU! +' + data.xp + ' XP, +' + data.gold + ' ouro', 'win');
-  if (data.drops && data.drops.length > 0) {
-    log('💎 Drops: ' + data.drops.map(function(d) { return d.icon + ' ' + d.name; }).join(', '), 'loot');
-  }
-  updateUI();
-});
-
-socket.on('died', function(data) {
-  inCombat = false;
-  player.hp = 0;
-  document.getElementById('combatOverlay').classList.remove('active');
-  var dn = data.drops.map(function(d) { return d.icon + ' ' + d.name; }).join(', ');
-  document.getElementById('deathMessage').textContent = data.killer + ' te matou...';
-  document.getElementById('droppedItems').textContent = data.drops.length > 0 ? 'Perdeu: ' + dn : 'Sem itens para perder.';
-  document.getElementById('respawnScreen').classList.add('active');
-  log('💀 VOCÊ MORREU! Matou: ' + data.killer, 'death');
-  updateUI();
-});
-
-socket.on('playerDied', function(data) {
-  log('💀 ' + data.name + ' foi morto por ' + data.killer + '!', 'death');
-});
-
-socket.on('respawned', function(data) {
-  player.pos = data.pos;
-  player.hp = data.hp;
-  player.mana = data.mana;
-  document.getElementById('respawnScreen').classList.remove('active');
-  log('🌟 Ressurgiu no Banco!', 'info');
-  updateUI();
-  renderMap();
-});
-
-socket.on('error', function(msg) {
-  log('❌ ' + msg, 'system');
-});
-
-// ==================== AÇÕES DO CLIENTE ====================
-function moveTo(x, y) {
-  if (inCombat) { log('Em combate!', 'system'); return; }
-  socket.emit('move', { x: x, y: y });
+  var isBank=(player.pos.x>=1&&player.pos.x<=2&&player.pos.y>=1&&player.pos.y<=2);
+  document.getElementById('zoneInfo').innerHTML=isBank?
+    '<span class="zone-badge zone-safe">🏦 BANCO - Seguro</span>':
+    '<span class="zone-badge zone-pvp">⚔️ ZONA PvP - Perigoso!</span>';
+  document.getElementById('btnRest').disabled=!isBank;
 }
 
-function toggleEquip(index) {
-  socket.emit('equip', { index: index });
-}
-
-function pickupItem(index) {
-  socket.emit('pickup', { index: index });
-}
-
-function rest() {
-  socket.emit('rest');
-}
-
-function openCombatMenu() {
-  if (inCombat) return;
-  if (nearbyPlayers.length === 0) { log('Ninguém por perto!', 'system'); return; }
-  var panel = document.getElementById('combatPanel');
-  if (panel) panel.style.display = 'block';
-  var html = nearbyPlayers.map(function(t) {
-    var pct = (t.hp / t.hpMax) * 100;
-    return '<div class="combat-target" onclick="attackPlayer('' + t.id + '')">' +
-      '<span>' + getClassIcon(t.cls) + ' ' + t.name + '</span>' +
-      '<span style="color:var(--muted);font-size:9px">Lv.' + t.lvl + '</span>' +
-      '<div class="target-hp"><div class="target-hp-fill" style="width:' + pct + '%"></div></div>' +
-      '<span style="font-size:9px">' + t.hp + '/' + t.hpMax + '</span>' +
-      '</div>';
-  }).join('');
-  var te = document.getElementById('combatTargets');
-  if (te) te.innerHTML = html;
-}
-
-function closeCombatMenu() {
-  var panel = document.getElementById('combatPanel');
-  if (panel) panel.style.display = 'none';
-}
-
-function attackPlayer(targetId) {
-  closeCombatMenu();
-  socket.emit('attack', { targetId: targetId });
-}
-
-function openBank() {
-  var panel = document.getElementById('bankPanel');
-  if (panel) panel.style.display = 'block';
-  renderBank();
-}
-
-function closeBank() {
-  var panel = document.getElementById('bankPanel');
-  if (panel) panel.style.display = 'none';
-}
-
-function depositAll() {
-  socket.emit('depositAll');
-}
-
-function withdrawAll() {
-  socket.emit('withdrawAll');
-}
-
-function withdraw(index) {
-  socket.emit('withdraw', { index: index });
-}
-
-function respawn() {
-  socket.emit('respawn');
-}
-
-// ==================== RENDERIZAÇÃO ====================
-function updateUI() {
-  if (!player) return;
-  var cl = document.getElementById('charLvl'), ht = document.getElementById('hpText'), hb = document.getElementById('hpBar');
-  var mt = document.getElementById('manaText'), mb = document.getElementById('manaBar');
-  var xt = document.getElementById('xpText'), xb = document.getElementById('xpBar');
-  var sd = document.getElementById('statDmg'), sf = document.getElementById('statDef'), ss = document.getElementById('statSpd');
-  var sg = document.getElementById('statGold'), sk = document.getElementById('statKills'), sdt = document.getElementById('statDeaths');
-
-  if (cl) cl.textContent = player.lvl;
-  if (ht) ht.textContent = player.hp + '/' + player.hpMax;
-  if (hb) hb.style.width = ((player.hp / player.hpMax) * 100) + '%';
-  if (mt) mt.textContent = player.mana + '/' + player.manaMax;
-  if (mb) mb.style.width = ((player.mana / player.manaMax) * 100) + '%';
-  if (xt) xt.textContent = player.xp + '/' + player.xpNext;
-  if (xb) xb.style.width = ((player.xp / player.xpNext) * 100) + '%';
-  if (sd) sd.textContent = player.stats ? player.stats.dmg : 10;
-  if (sf) sf.textContent = player.stats ? player.stats.def : 5;
-  if (ss) ss.textContent = player.stats ? player.stats.spd : 10;
-  if (sg) sg.textContent = player.gold || 0;
-  if (sk) sk.textContent = player.kills || 0;
-  if (sdt) sdt.textContent = player.deaths || 0;
-
-  var isBank = player.pos.x >= 1 && player.pos.x <= 2 && player.pos.y >= 1 && player.pos.y <= 2;
-  var zb = isBank ? '<span class="zone-badge zone-safe">🏦 SEGURO</span>' : '<span class="zone-badge zone-pvp">⚔️ PvP</span>';
-  var zi = document.getElementById('zoneInfo');
-  if (zi) zi.innerHTML = (isBank ? 'Banco' : 'Zona PvP') + ' ' + zb;
-
-  var br = document.getElementById('btnRest'), ba = document.getElementById('btnAttack'), bb = document.getElementById('btnBank');
-  if (br) br.disabled = inCombat || !isBank;
-  if (ba) ba.disabled = inCombat || isBank;
-  if (bb) bb.disabled = inCombat || !isBank;
-
-  renderInventory();
-  renderNearbyPlayers();
-}
-
-function updateStats(stats) {
-  var sd = document.getElementById('statDmg'), sf = document.getElementById('statDef'), ss = document.getElementById('statSpd');
-  if (sd) sd.textContent = stats.dmg;
-  if (sf) sf.textContent = stats.def;
-  if (ss) ss.textContent = stats.spd;
-}
-
-function renderInventory() {
-  if (!player) return;
-  var ig = document.getElementById('inventory');
-  if (!ig) return;
-  ig.innerHTML = '';
-  for (var i = 0; i < 16; i++) {
-    var it = player.inv ? player.inv[i] : null;
-    var div = document.createElement('div');
-    div.className = 'inv-slot';
-    if (it) {
-      var d = ITEMS[it.id];
-      var eq = (player.eq && (player.eq.weapon === it.id || player.eq.armor === it.id || player.eq.accessory === it.id));
-      if (eq) div.classList.add('equipped');
-      div.innerHTML = (d ? d.i : '📦') + '<span class="qty">' + (it.qty > 1 ? it.qty : '') + '</span>' +
-        '<div class="item-tooltip">' + (d ? d.n : it.id) + (eq ? ' [EQ]' : '') + '</div>';
-      div.onclick = (function(idx) { return function() { toggleEquip(idx); }; })(i);
-    }
-    ig.appendChild(div);
-  }
-}
-
-function renderGroundItems(items) {
-  var ge = document.getElementById('groundItems');
-  if (!ge) return;
-  if (!items || items.length === 0) {
-    ge.innerHTML = '<p style="color:var(--muted);font-size:10px;text-align:center;margin:0">Nenhum item.</p>';
-  } else {
-    ge.innerHTML = items.map(function(it, i) {
-      var d = ITEMS[it.id];
-      return '<div class="ground-item"><span>' + (d ? d.i : '📦') + ' ' + (d ? d.n : it.id) + '</span><button onclick="pickupItem(' + i + ')">📥</button></div>';
-    }).join('');
-  }
-}
-
-function renderNearbyPlayers() {
-  var pl = document.getElementById('playersList');
-  var pc = document.getElementById('playerCount');
-  if (pc) pc.textContent = '(' + nearbyPlayers.length + ')';
-  if (!pl) return;
-  if (nearbyPlayers.length === 0) {
-    pl.innerHTML = '<p style="color:var(--muted);font-size:10px;text-align:center;margin:0">Sozinho aqui.</p>';
-  } else {
-    pl.innerHTML = nearbyPlayers.map(function(p) {
-      var pct = (p.hp / p.hpMax) * 100;
-      return '<div class="player-entry">' +
-        '<span class="name">' + getClassIcon(p.cls) + ' ' + p.name + '</span>' +
-        '<span class="lvl">Lv.' + p.lvl + '</span>' +
-        '<div class="hp-bar"><div class="hp-bar-inner" style="width:' + pct + '%"></div></div>' +
-        '</div>';
-    }).join('');
-  }
-}
-
-function renderBank() {
-  if (!player) return;
-  var bs = document.getElementById('bankStorage');
-  if (!bs) return;
-  if (!player.bank || player.bank.length === 0) {
-    bs.innerHTML = '<p style="color:var(--muted);font-size:10px;text-align:center">Vazio.</p>';
-  } else {
-    bs.innerHTML = player.bank.map(function(it, i) {
-      var d = ITEMS[it.id];
-      return '<div class="ground-item"><span>' + (d ? d.i : '📦') + ' ' + (d ? d.n : it.id) + ' x' + it.qty + '</span><button onclick="withdraw(' + i + ')">📤</button></div>';
-    }).join('');
-  }
-}
-
-function renderMap() {
-  if (!player) return;
-  var mm = document.getElementById('miniMap');
-  if (!mm) return;
-  mm.innerHTML = '';
-  for (var y = 0; y < MAP_LAYOUT.length; y++) {
-    for (var x = 0; x < MAP_LAYOUT[y].length; x++) {
-      var zk = MAP_LAYOUT[y][x];
-      var cell = document.createElement('div');
-      cell.className = 'map-cell ' + (zk === 'bank' ? 'safe' : 'pvp');
-      if (x === player.pos.x && y === player.pos.y) {
-        cell.classList.add('current');
-        cell.textContent = '👤';
-      } else {
-        cell.textContent = zk === 'bank' ? '🏦' : '⚔️';
+function renderInventory(){
+  var g=document.getElementById('inventoryGrid');
+  g.innerHTML='';
+  if(!player||!player.inv)return;
+  for(var i=0;i<16;i++){
+    var slot=document.createElement('div');
+    slot.className='inv-slot';
+    var item=player.inv[i];
+    if(item&&ITEMS[item.id]){
+      slot.innerHTML=ITEMS[item.id].icon+'<span class="qty">'+item.qty+'</span>';
+      var tt=document.createElement('div');
+      tt.className='item-tooltip';
+      tt.textContent=ITEMS[item.id].name;
+      slot.appendChild(tt);
+      if(player.eq&&(player.eq.weapon===item.id||player.eq.armor===item.id||player.eq.accessory===item.id)){
+        slot.classList.add('equipped');
       }
-      cell.onclick = (function(nx, ny) { return function() { moveTo(nx, ny); }; })(x, y);
-      mm.appendChild(cell);
+      slot.onclick=(function(idx){return function(){socket.emit('equip',{index:idx});}})(i);
+    }
+    g.appendChild(slot);
+  }
+}
+
+function renderBank(){
+  var g=document.getElementById('bankGrid');
+  g.innerHTML='';
+  if(!player||!player.bank)return;
+  for(var i=0;i<16;i++){
+    var slot=document.createElement('div');
+    slot.className='inv-slot';
+    var item=player.bank[i];
+    if(item&&ITEMS[item.id]){
+      slot.innerHTML=ITEMS[item.id].icon+'<span class="qty">'+item.qty+'</span>';
+      var tt=document.createElement('div');
+      tt.className='item-tooltip';
+      tt.textContent=ITEMS[item.id].name;
+      slot.appendChild(tt);
+      slot.onclick=(function(idx){return function(){socket.emit('withdraw',{index:idx});}})(i);
+    }
+    g.appendChild(slot);
+  }
+}
+
+function renderMap(){
+  var g=document.getElementById('miniMap');
+  g.innerHTML='';
+  for(var y=0;y<5;y++){
+    for(var x=0;x<5;x++){
+      var cell=document.createElement('div');
+      cell.className='map-cell';
+      var isBank=(x>=1&&x<=2&&y>=1&&y<=2);
+      cell.classList.add(isBank?'safe':'pvp');
+      cell.textContent=isBank?'🏦':'⚔️';
+      if(player&&player.pos.x===x&&player.pos.y===y){
+        cell.classList.add('current');
+        cell.textContent='👤';
+      }
+      cell.onclick=(function(cx,cy){return function(){
+        if(!player||inCombat)return;
+        var dx=Math.abs(cx-player.pos.x),dy=Math.abs(cy-player.pos.y);
+        if(dx+dy===1)socket.emit('move',{x:cx,y:cy});
+        else log('Só pode mover para tiles adjacentes!','system');
+      };})(x,y);
+      g.appendChild(cell);
     }
   }
 }
 
-function renderCombatLog() {
-  var box = document.getElementById('combatLogBox');
-  if (!box) return;
-  box.innerHTML = combatLog.map(function(entry) {
-    var color = entry.type === 'attack' ? '#ff7b72' : '#ffa657';
-    var crit = entry.crit ? ' <strong style="color:#f85149">💥 CRÍTICO!</strong>' : '';
-    return '<div style="color:' + color + '">' + entry.attacker + ' → ' + entry.defender + ': ' + entry.dmg + ' dano' + crit + '</div>';
-  }).join('');
-  box.scrollTop = box.scrollHeight;
+function renderNearby(list){
+  var g=document.getElementById('nearbyPlayers');
+  g.innerHTML='';
+  if(!list||!list.length){g.innerHTML='<p style="color:var(--muted);font-size:10px;text-align:center">Nenhum jogador por perto.</p>';return;}
+  list.forEach(function(p){
+    var el=document.createElement('div');
+    el.className='player-entry';
+    var hpPct=Math.floor((p.hp/p.hpMax)*100);
+    el.innerHTML='<div><span class="name">'+p.name+'</span> <span class="lvl">Lv.'+p.lvl+'</span></div>'+
+      '<div class="hp-bar"><div class="hp-bar-inner" style="width:'+hpPct+'%"></div></div>';
+    if(!inCombat){
+      var btn=document.createElement('button');
+      btn.className='btn btn-danger';
+      btn.style='width:auto;padding:2px 6px;font-size:9px;margin:0';
+      btn.textContent='⚔️ Atacar';
+      btn.onclick=function(){socket.emit('attack',{targetId:p.id});};
+      el.appendChild(btn);
+    }
+    g.appendChild(el);
+  });
 }
 
-function getClassIcon(cls) {
-  return { warrior: '⚔️', mage: '🔮', rogue: '🗡️' }[cls] || '👤';
+function renderGround(items){
+  var g=document.getElementById('groundItems');
+  g.innerHTML='';
+  if(!items||!items.length){g.innerHTML='<p style="color:var(--muted);font-size:10px;text-align:center">Nenhum item no chão.</p>';return;}
+  items.forEach(function(item,idx){
+    var el=document.createElement('div');
+    el.className='ground-item';
+    el.innerHTML='<span>'+(ITEMS[item.id]?ITEMS[item.id].icon:'📦')+' '+(ITEMS[item.id]?ITEMS[item.id].name:item.id)+' x'+item.qty+'</span>';
+    var btn=document.createElement('button');
+    btn.textContent='Pegar';
+    btn.onclick=function(){socket.emit('pickup',{index:idx});};
+    el.appendChild(btn);
+    g.appendChild(el);
+  });
 }
 
-function log(msg, type) {
-  var el = document.getElementById('gameLog');
-  if (!el) return;
-  var entry = document.createElement('div');
-  entry.className = 'log-entry log-' + type;
-  entry.textContent = '[' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + '] ' + msg;
-  el.appendChild(entry);
-  el.scrollTop = el.scrollHeight;
-}
+function rest(){socket.emit('rest');}
+function depositAll(){socket.emit('depositAll');}
+function withdrawAll(){socket.emit('withdrawAll');}
+function respawn(){socket.emit('respawn');}
+function leaveGame(){location.reload();}
+
+// Initialize on page load
+window.onload=function(){
+  initSocket();
+  document.getElementById('playerName').focus();
+  document.getElementById('playerName').addEventListener('keypress',function(e){
+    if(e.key==='Enter')startGame();
+  });
+};
 </script>
 </body>
 </html>
