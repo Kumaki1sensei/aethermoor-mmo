@@ -95,8 +95,10 @@ function removeGroundItem(x, y, index) {
 function sanitizePlayer(p) {
   return {
     id: p.id, name: p.name, cls: p.cls, lvl: p.lvl,
-    hp: p.hp, hpMax: p.hpMax, pos: p.pos,
-    eq: p.eq, inCombat: p.inCombat
+    hp: p.hp, hpMax: p.hpMax, mana: p.mana, manaMax: p.manaMax,
+    xp: p.xp, xpNext: p.xpNext, gold: p.gold,
+    pos: p.pos, eq: p.eq, inCombat: p.inCombat,
+    kills: p.kills, deaths: p.deaths
   };
 }
 
@@ -141,13 +143,17 @@ io.on('connection', (socket) => {
     const base = CLASSES[cls] || CLASSES.warrior;
     const player = {
       id: socket.id, socket: socket,
-      name: name.substring(0, 16) || 'Herói',
+      name: (name || 'Herói').substring(0, 16),
       cls: cls || 'warrior', lvl: 1, xp: 0, xpNext: 100,
       hp: base.hpMax, hpMax: base.hpMax,
       mana: base.manaMax, manaMax: base.manaMax,
       baseDmg: base.dmg, baseDef: base.def, baseSpd: base.spd,
       gold: 50, pos: { ...SPAWN_POS },
-      inv: [{ id: 'espada_madeira', qty: 1 }, { id: 'tunica', qty: 1 }, { id: 'pocao_vida', qty: 2 }],
+      inv: [
+        { id: 'espada_madeira', qty: 1 },
+        { id: 'tunica', qty: 1 },
+        { id: 'pocao_vida', qty: 2 }
+      ],
       eq: { weapon: 'espada_madeira', armor: 'tunica', accessory: null },
       bank: [], kills: 0, deaths: 0, inCombat: false, combatTarget: null
     };
