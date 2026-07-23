@@ -1,736 +1,868 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aethermoor MMO v11 Fix</title>
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<title>Aethermoor MMO - Multiplayer</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: #0a0a0f; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 10px;
-  }
-  h1 { color: #ffaa00; text-shadow: 0 0 10px #ffaa0055; margin-bottom: 8px; font-size: 1.8em; }
-  .subtitle { color: #888; font-size: 0.85em; margin-bottom: 15px; }
+:root{--bg:#0d1117;--panel:#161b22;--border:#30363d;--accent:#58a6ff;--danger:#f85149;--success:#3fb950;--warning:#d29922;--text:#c9d1d9;--muted:#8b949e;--gold:#e3b341;--rare:#58a6ff;--epic:#a371f7;--legendary:#e3b341}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;margin:0;padding:0;overflow-x:hidden}
+.container{max-width:1200px;margin:0 auto;padding:10px}
+.header{text-align:center;padding:10px;border-bottom:2px solid var(--border)}
+.header h1{color:var(--gold);margin:0;font-size:24px}
+.header p{color:var(--muted);margin:3px 0 0;font-size:12px}
+.grid{display:grid;grid-template-columns:260px 1fr 260px;gap:8px;margin-top:8px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px}
+.panel h3{margin:0 0 6px;color:var(--accent);font-size:13px;border-bottom:1px solid var(--border);padding-bottom:4px}
+.stat-row{display:flex;justify-content:space-between;margin:3px 0;font-size:11px}
+.stat-bar-bg{background:#21262d;height:7px;border-radius:3px;margin-top:2px;overflow:hidden}
+.stat-bar-fill{height:100%;border-radius:3px;transition:width 0.3s}
+.hp-fill{background:var(--danger)}.xp-fill{background:var(--accent)}.mana-fill{background:#a371f7}
+.btn{display:block;width:100%;padding:7px;margin:3px 0;border:1px solid var(--border);border-radius:5px;background:#21262d;color:var(--text);cursor:pointer;font-size:11px;transition:all 0.2s;text-align:center}
+.btn:hover{background:#30363d;border-color:var(--accent)}
+.btn-danger{border-color:var(--danger)}.btn-danger:hover{background:rgba(248,81,73,0.15)}
+.btn-success{border-color:var(--success)}.btn-success:hover{background:rgba(63,185,80,0.15)}
+.btn-gold{border-color:var(--gold);color:var(--gold)}.btn-gold:hover{background:rgba(227,179,65,0.15)}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+.log{height:160px;overflow-y:auto;font-size:11px;line-height:1.4;background:#0d1117;border-radius:5px;padding:6px;border:1px solid var(--border)}
+.log-entry{margin:2px 0;padding:2px 4px;border-radius:3px}
+.log-combat{color:#ff7b72}.log-loot{color:#3fb950}.log-info{color:#79c0ff}.log-death{color:#f85149;font-weight:bold}.log-system{color:var(--muted)}.log-pvp{color:#d29922}.log-win{color:#3fb950;font-weight:bold}.log-legendary{color:var(--legendary);font-weight:bold}.log-epic{color:var(--epic)}.log-rare{color:var(--rare)}
+.zone-badge{display:inline-block;padding:2px 6px;border-radius:8px;font-size:9px;font-weight:bold}
+.zone-safe{background:rgba(63,185,80,0.2);color:var(--success);border:1px solid var(--success)}
+.zone-pvp{background:rgba(248,81,73,0.2);color:var(--danger);border:1px solid var(--danger)}
+.inventory-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:4px}
+.inv-slot{width:100%;height:50px;background:#0d1117;border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;position:relative}
+.inv-slot:hover{border-color:var(--accent)}
+.inv-slot .qty{position:absolute;bottom:1px;right:2px;font-size:8px;color:var(--muted);background:rgba(0,0,0,0.7);padding:0 2px;border-radius:2px}
+.equipped{border-color:var(--gold)!important;box-shadow:0 0 3px rgba(227,179,65,0.3)}
+.item-tooltip{position:absolute;bottom:105%;left:50%;transform:translateX(-50%);background:#0d1117;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:9px;white-space:nowrap;z-index:10;display:none}
+.inv-slot:hover .item-tooltip{display:block}
+.ground-item{display:flex;justify-content:space-between;align-items:center;padding:3px 5px;margin:2px 0;background:#0d1117;border-radius:4px;border:1px solid var(--border);font-size:10px}
+.ground-item button{padding:2px 6px;font-size:9px;border-radius:3px;border:1px solid var(--success);background:transparent;color:var(--success);cursor:pointer}
+.ground-item button:hover{background:rgba(63,185,80,0.15)}
+.player-entry{display:flex;justify-content:space-between;align-items:center;padding:3px 5px;margin:2px 0;border-radius:4px;font-size:10px;background:#0d1117;border:1px solid var(--border)}
+.player-entry .name{color:var(--accent);font-weight:bold}.player-entry .lvl{color:var(--muted)}
+.player-entry .hp-bar{width:45px;height:4px;background:#21262d;border-radius:2px;overflow:hidden}
+.player-entry .hp-bar-inner{height:100%;background:var(--danger);border-radius:2px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-overlay.active{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;width:340px;text-align:center}
+.modal h2{color:var(--gold);margin:0 0 10px;font-size:20px}
+.modal input{width:100%;padding:8px;margin:5px 0;background:#0d1117;border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:13px;box-sizing:border-box}
+.modal .class-select{display:flex;gap:5px;margin:8px 0}
+.modal .class-option{flex:1;padding:6px;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:10px;transition:all 0.2s}
+.modal .class-option:hover,.modal .class-option.selected{border-color:var(--accent);background:rgba(88,166,255,0.1)}
+.modal .class-option .icon{font-size:16px;display:block;margin-bottom:2px}
+.respawn-screen{position:fixed;inset:0;background:rgba(0,0,0,0.95);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:200}
+.respawn-screen.active{display:flex}
+.respawn-screen h1{color:var(--danger);font-size:36px;margin:0}
+.respawn-screen p{color:var(--muted);font-size:13px;margin:8px 0 16px}
+.respawn-screen .dropped-items{color:var(--gold);font-size:12px;margin:5px 0;max-width:350px;text-align:center}
+.mini-map{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:5px}
+.map-cell{height:35px;border-radius:3px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:8px;cursor:pointer;transition:all 0.2s;position:relative}
+.map-cell.safe{background:rgba(63,185,80,0.15)}.map-cell.pvp{background:rgba(248,81,73,0.1)}
+.map-cell.current{border-color:var(--accent);box-shadow:0 0 5px rgba(88,166,255,0.4)}.map-cell:hover{border-color:var(--text)}
+.combat-target{display:flex;align-items:center;gap:5px;padding:5px;margin:2px 0;background:#0d1117;border-radius:4px;border:1px solid var(--border);cursor:pointer;font-size:11px}
+.combat-target:hover{border-color:var(--danger)}
+.combat-target .target-hp{flex:1;height:5px;background:#21262d;border-radius:2px;overflow:hidden}
+.combat-target .target-hp-fill{height:100%;background:var(--danger);border-radius:2px}
+.combat-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:150}
+.combat-overlay.active{display:flex}
+.combat-box{background:var(--panel);border:1px solid var(--danger);border-radius:10px;padding:20px;width:350px;text-align:center}
+.combat-box h3{color:var(--danger);margin:0 0 10px}
+.combat-log{height:120px;overflow-y:auto;font-size:11px;background:#0d1117;border-radius:5px;padding:8px;margin:10px 0;text-align:left}
+.hidden{display:none!important}
+.connection-status{position:fixed;top:10px;right:10px;padding:5px 10px;border-radius:5px;font-size:11px;z-index:300}
+.status-online{background:rgba(63,185,80,0.2);color:var(--success);border:1px solid var(--success)}
+.status-offline{background:rgba(248,81,73,0.2);color:var(--danger);border:1px solid var(--danger)}
+.status-connecting{background:rgba(217,179,65,0.2);color:var(--gold);border:1px solid var(--gold)}
+.kick-screen{position:fixed;inset:0;background:rgba(0,0,0,0.95);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:500}
+.kick-screen.active{display:flex}
+.kick-screen h1{color:var(--danger);font-size:28px;margin:0}
+.kick-screen p{color:var(--muted);font-size:14px;margin:10px 0 20px;max-width:400px;text-align:center}
+.rarity-common{color:#8b949e}
+.rarity-rare{color:#58a6ff}
+.rarity-epic{color:#a371f7}
+.rarity-legendary{color:#e3b341;font-weight:bold}
 
-  #loginScreen {
-    display: flex; flex-direction: column; align-items: center; gap: 15px;
-    background: #12121a; border: 1px solid #333; border-radius: 12px;
-    padding: 30px 40px; max-width: 380px; width: 100%; margin-top: 50px;
-    box-shadow: 0 0 30px #000;
-  }
-  #loginScreen h2 { color: #ffaa00; margin-bottom: 5px; }
-  #loginScreen input {
-    width: 100%; padding: 12px 15px; background: #1a1a25; border: 1px solid #333;
-    border-radius: 8px; color: #e0e0e0; font-size: 1em; outline: none;
-  }
-  #loginScreen input:focus { border-color: #ffaa00; }
-  #loginScreen button {
-    width: 100%; padding: 12px; border: none; border-radius: 8px;
-    font-size: 1em; font-weight: bold; cursor: pointer; transition: all 0.2s;
-  }
-  .btn-login { background: #ffaa00; color: #000; }
-  .btn-login:hover { background: #ffcc33; }
-  .btn-register { background: #333; color: #e0e0e0; }
-  .btn-register:hover { background: #444; }
-  .login-msg { color: #ff4444; font-size: 0.85em; min-height: 18px; text-align: center; }
-  .login-hint { color: #666; font-size: 0.75em; text-align: center; }
+/* CHAT */
+.chat-box{background:#0d1117;border:1px solid var(--border);border-radius:5px;padding:6px;margin-top:5px}
+.chat-messages{height:90px;overflow-y:auto;font-size:11px;line-height:1.5}
+.chat-msg{margin:1px 0;padding:1px 3px;border-radius:2px}
+.chat-msg .chat-name{font-weight:bold}
+.chat-msg .chat-lvl{color:var(--muted);font-size:9px}
+.chat-input{display:flex;gap:4px;margin-top:4px}
+.chat-input input{flex:1;padding:5px;background:#161b22;border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px}
+.chat-input button{padding:5px 10px;background:var(--accent);color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:11px}
+.chat-input button:hover{background:#79c0ff}
+.chat-warrior{color:#ff7b72}
+.chat-mage{color:#a371f7}
+.chat-rogue{color:#3fb950}
 
-  #gameScreen { display: none; width: 100%; max-width: 1100px; gap: 10px; }
-  .game-layout { display: flex; gap: 10px; width: 100%; }
-
-  .left-panel { display: flex; flex-direction: column; gap: 10px; width: 220px; min-width: 220px; }
-  .panel {
-    background: #12121a; border: 1px solid #333; border-radius: 10px; padding: 12px;
-  }
-  .panel h3 { color: #ffaa00; font-size: 0.9em; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px; }
-
-  .stat-row { display: flex; justify-content: space-between; align-items: center; margin: 4px 0; font-size: 0.82em; }
-  .stat-label { color: #888; }
-  .stat-value { color: #e0e0e0; font-weight: bold; }
-  .bar-container { width: 100%; height: 14px; background: #1a1a25; border-radius: 7px; overflow: hidden; margin: 3px 0; }
-  .bar-hp { height: 100%; background: #ff4444; border-radius: 7px; transition: width 0.3s; }
-  .bar-mana { height: 100%; background: #4488ff; border-radius: 7px; transition: width 0.3s; }
-  .bar-xp { height: 100%; background: #ffaa00; border-radius: 7px; transition: width 0.3s; }
-
-  .map-panel { flex: 1; display: flex; flex-direction: column; align-items: center; }
-  .map-grid {
-    display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px;
-    background: #0d0d15; padding: 8px; border-radius: 10px; border: 1px solid #333;
-  }
-  .tile {
-    width: 65px; height: 65px; border-radius: 6px; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; font-size: 0.75em; cursor: pointer;
-    transition: all 0.15s; position: relative; user-select: none;
-  }
-  .tile-bank { background: #1a3a1a; border: 1px solid #2a5a2a; }
-  .tile-bank:hover { background: #1f4a1f; }
-  .tile-pvp { background: #2a1515; border: 1px solid #4a2222; }
-  .tile-pvp:hover { background: #3a2020; }
-  .tile-players { position: absolute; bottom: 2px; right: 2px; font-size: 0.7em; background: #ff4444; color: #fff; padding: 1px 4px; border-radius: 4px; }
-  .tile-loot { position: absolute; top: 2px; left: 2px; font-size: 0.7em; background: #ffaa00; color: #000; padding: 1px 4px; border-radius: 4px; }
-  .tile-coords { position: absolute; top: 2px; right: 2px; font-size: 0.6em; color: #555; }
-
-  .tile-content {
-    font-size: 1.8em;
-    z-index: 2;
-    pointer-events: none;
-  }
-  .tile-player-icon {
-    font-size: 1.8em;
-    cursor: crosshair;
-    z-index: 3;
-    pointer-events: auto;
-    padding: 2px;
-    border-radius: 4px;
-  }
-  .tile-player-icon:hover {
-    background: rgba(255,170,0,0.2);
-  }
-
-  .right-panel { display: flex; flex-direction: column; gap: 10px; width: 260px; min-width: 260px; }
-
-  .inv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-  .inv-slot {
-    width: 100%; height: 50px; background: #1a1a25; border: 1px solid #333;
-    border-radius: 6px; display: flex; align-items: center; justify-content: center;
-    font-size: 1.4em; cursor: pointer; position: relative; transition: all 0.15s;
-  }
-  .inv-slot:hover { border-color: #ffaa00; background: #22222f; }
-  .inv-slot .qty { position: absolute; bottom: 2px; right: 2px; font-size: 0.6em; background: rgba(0,0,0,0.7); color: #fff; padding: 1px 4px; border-radius: 3px; }
-  .inv-slot.equipped { border-color: #ffaa00; box-shadow: 0 0 5px #ffaa0055; }
-
-  .eq-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
-  .eq-slot {
-    width: 100%; height: 50px; background: #1a1a25; border: 1px solid #444;
-    border-radius: 6px; display: flex; flex-direction: column; align-items: center;
-    justify-content: center; font-size: 1.2em; cursor: pointer; position: relative;
-  }
-  .eq-slot:hover { border-color: #ffaa00; }
-  .eq-slot .eq-label { font-size: 0.55em; color: #666; position: absolute; top: 2px; }
-
-  .bank-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-  .bank-slot {
-    width: 100%; height: 45px; background: #1a251a; border: 1px solid #2a3a2a;
-    border-radius: 6px; display: flex; align-items: center; justify-content: center;
-    font-size: 1.3em; cursor: pointer; position: relative;
-  }
-  .bank-slot:hover { border-color: #44ff44; }
-  .bank-slot .qty { position: absolute; bottom: 2px; right: 2px; font-size: 0.6em; background: rgba(0,0,0,0.7); color: #fff; padding: 1px 4px; border-radius: 3px; }
-
-  .combat-log {
-    max-height: 120px; overflow-y: auto; font-size: 0.75em; color: #aaa;
-    background: #0d0d15; border-radius: 6px; padding: 6px;
-  }
-  .combat-log div { margin: 2px 0; padding: 2px 4px; border-radius: 3px; }
-  .combat-log div:nth-child(odd) { background: #15151f; }
-
-  .chat-box {
-    max-height: 160px; overflow-y: auto; font-size: 0.78em;
-    background: #0d0d15; border-radius: 6px; padding: 6px; margin-bottom: 6px;
-  }
-  .chat-msg { margin: 2px 0; word-break: break-word; }
-  .chat-msg .chat-level { color: #ffaa00; font-weight: bold; }
-  .chat-msg .chat-name { font-weight: bold; }
-  .chat-msg .chat-sys { color: #ffaa00; font-weight: bold; }
-  .chat-input {
-    width: 100%; padding: 8px 10px; background: #1a1a25; border: 1px solid #333;
-    border-radius: 6px; color: #e0e0e0; font-size: 0.85em; outline: none;
-  }
-  .chat-input:focus { border-color: #ffaa00; }
-
-  .btn {
-    padding: 8px 14px; border: none; border-radius: 6px; font-size: 0.85em;
-    font-weight: bold; cursor: pointer; transition: all 0.2s; margin: 2px;
-  }
-  .btn-attack { background: #ff4444; color: #fff; }
-  .btn-attack:hover { background: #ff6666; }
-  .btn-rest { background: #44aa44; color: #fff; }
-  .btn-rest:hover { background: #55cc55; }
-  .btn-bank { background: #4488ff; color: #fff; }
-  .btn-bank:hover { background: #5599ff; }
-  .btn-logout { background: #444; color: #e0e0e0; }
-  .btn-logout:hover { background: #555; }
-
-  .connection { font-size: 0.8em; margin-bottom: 8px; }
-  .conn-ok { color: #44ff44; }
-  .conn-warn { color: #ffaa00; }
-  .conn-err { color: #ff4444; }
-
-  .damage-popup {
-    position: fixed; font-size: 1.5em; font-weight: bold; pointer-events: none;
-    animation: popUp 1s ease-out forwards; z-index: 1000;
-  }
-  @keyframes popUp {
-    0% { transform: translateY(0) scale(1); opacity: 1; }
-    100% { transform: translateY(-50px) scale(1.3); opacity: 0; }
-  }
-
-  .tooltip {
-    position: fixed; background: #1a1a25; border: 1px solid #ffaa00; border-radius: 6px;
-    padding: 6px 10px; font-size: 0.75em; color: #e0e0e0; pointer-events: none;
-    z-index: 1000; display: none; max-width: 180px;
-  }
-  .tooltip .tt-name { font-weight: bold; margin-bottom: 3px; }
-  .tooltip .tt-stat { color: #888; }
-
-  @media (max-width: 900px) {
-    .game-layout { flex-direction: column; }
-    .left-panel, .right-panel { width: 100%; min-width: auto; }
-    .tile { width: 42px; height: 42px; font-size: 0.6em; }
-  }
+/* LOGIN TABS */
+.login-tabs{display:flex;gap:5px;margin-bottom:10px}
+.login-tab{flex:1;padding:8px;border:1px solid var(--border);border-radius:5px;background:#0d1117;color:var(--muted);cursor:pointer;font-size:12px;transition:all 0.2s}
+.login-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.login-tab:hover:not(.active){border-color:var(--accent);color:var(--text)}
+.login-msg{color:var(--danger);font-size:11px;margin:5px 0;min-height:16px}
+.login-hint{color:var(--muted);font-size:10px;margin-top:8px}
 </style>
 </head>
 <body>
 
-<h1>Aethermoor MMO</h1>
-<div class="subtitle">v11 Fix - Movimento Corrigido</div>
+<div id="connectionStatus" class="connection-status status-connecting">🟡 Conectando...</div>
 
-<div id="loginScreen">
-  <h2>Entrar no Mundo</h2>
-  <input type="text" id="loginUser" placeholder="Username (3-16 chars)" maxlength="16">
-  <input type="password" id="loginPass" placeholder="Password (min 4 chars)">
-  <button class="btn-login" onclick="doLogin()">Entrar</button>
-  <button class="btn-register" onclick="doRegister()">Criar Conta</button>
-  <div class="login-msg" id="loginMsg"></div>
-  <div class="login-hint">Dados guardados entre sessoes!<br>Conta nova com espada + tunica.</div>
+<!-- LOGIN / REGISTER MODAL -->
+<div id="loginModal" class="modal-overlay active">
+<div class="modal">
+<h2>⚔️ AETHERMOOR MMO</h2>
+<p style="color:var(--muted);font-size:11px;margin:0 0 8px">Multiplayer Real | PvP Total | Morte = Dropa Tudo | Mapa 7x7 | Login & Save</p>
+
+<div class="login-tabs">
+<div class="login-tab active" id="tabLogin" onclick="switchTab('login')">Entrar</div>
+<div class="login-tab" id="tabRegister" onclick="switchTab('register')">Criar Conta</div>
 </div>
 
-<div id="gameScreen">
-  <div class="connection" id="connStatus">Conectando...</div>
-
-  <div class="game-layout">
-    <div class="left-panel">
-      <div class="panel">
-        <h3><span id="pName">---</span></h3>
-        <div class="stat-row"><span class="stat-label">Classe</span><span class="stat-value" id="pClass">---</span></div>
-        <div class="stat-row"><span class="stat-label">Nivel</span><span class="stat-value" id="pLevel">1</span></div>
-        <div class="stat-row"><span class="stat-label">HP</span><span class="stat-value" id="pHpText">100/100</span></div>
-        <div class="bar-container"><div class="bar-hp" id="pHpBar" style="width:100%"></div></div>
-        <div class="stat-row"><span class="stat-label">Mana</span><span class="stat-value" id="pManaText">50/50</span></div>
-        <div class="bar-container"><div class="bar-mana" id="pManaBar" style="width:100%"></div></div>
-        <div class="stat-row"><span class="stat-label">XP</span><span class="stat-value" id="pXpText">0/100</span></div>
-        <div class="bar-container"><div class="bar-xp" id="pXpBar" style="width:0%"></div></div>
-        <div class="stat-row"><span class="stat-label">Ouro</span><span class="stat-value" id="pGold">0</span></div>
-        <div class="stat-row"><span class="stat-label">Kills</span><span class="stat-value" id="pKills">0</span></div>
-        <div class="stat-row"><span class="stat-label">Mortes</span><span class="stat-value" id="pDeaths">0</span></div>
-        <div class="stat-row"><span class="stat-label">Dano</span><span class="stat-value" id="pDmg">0</span></div>
-        <div class="stat-row"><span class="stat-label">Defesa</span><span class="stat-value" id="pDef">0</span></div>
-      </div>
-
-      <div class="panel">
-        <h3>Equipado</h3>
-        <div class="eq-grid" id="eqGrid"></div>
-      </div>
-
-      <div class="panel">
-        <h3>Log</h3>
-        <div class="combat-log" id="combatLog"></div>
-      </div>
-    </div>
-
-    <div class="map-panel">
-      <div class="panel" style="width:100%;">
-        <h3>Mapa (7x7)</h3>
-        <div class="map-grid" id="mapGrid"></div>
-        <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
-          <button class="btn btn-attack" id="btnAttack" onclick="attackTarget()" style="display:none;">Atacar</button>
-          <button class="btn btn-rest" id="btnRest" onclick="rest()" style="display:none;">Descansar</button>
-          <button class="btn btn-bank" id="btnBank" onclick="toggleBank()" style="display:none;">Banco</button>
-          <button class="btn btn-logout" onclick="logout()">Sair</button>
-        </div>
-      </div>
-
-      <div class="panel" style="width:100%; margin-top:8px;">
-        <h3>Chat Global</h3>
-        <div class="chat-box" id="chatBox"></div>
-        <input type="text" class="chat-input" id="chatInput" placeholder="Escreve e pressiona Enter..." maxlength="200" onkeydown="if(event.key==='Enter')sendChat()">
-      </div>
-    </div>
-
-    <div class="right-panel">
-      <div class="panel">
-        <h3>Inventario (16 slots)</h3>
-        <div class="inv-grid" id="invGrid"></div>
-      </div>
-
-      <div class="panel" id="bankPanel" style="display:none;">
-        <h3>Banco</h3>
-        <div class="bank-grid" id="bankGrid"></div>
-      </div>
-
-      <div class="panel">
-        <h3>Loot no Chao</h3>
-        <div id="lootList" style="font-size:0.8em; color:#888;">Nada aqui...</div>
-      </div>
-    </div>
-  </div>
+<!-- LOGIN FORM -->
+<div id="loginForm">
+<input type="text" id="loginUser" placeholder="Username..." maxlength="16">
+<input type="password" id="loginPass" placeholder="Password...">
+<button class="btn btn-success" onclick="doLogin()" style="font-size:14px;padding:10px">🔐 ENTRAR</button>
 </div>
 
-<div class="tooltip" id="tooltip"></div>
+<!-- REGISTER FORM -->
+<div id="registerForm" class="hidden">
+<input type="text" id="regUser" placeholder="Username (3-16 chars)..." maxlength="16">
+<input type="password" id="regPass" placeholder="Password (min 4 chars)...">
+<div class="class-select">
+<div class="class-option selected" data-class="warrior" onclick="selectClass(this)">
+<span class="icon">⚔️</span><strong>Guerreiro</strong><div style="color:var(--muted);font-size:8px">HP+ Dano+</div>
+</div>
+<div class="class-option" data-class="mage" onclick="selectClass(this)">
+<span class="icon">🔮</span><strong>Mago</strong><div style="color:var(--muted);font-size:8px">Mana+ Magia+</div>
+</div>
+<div class="class-option" data-class="rogue" onclick="selectClass(this)">
+<span class="icon">🗡️</span><strong>Ladino</strong><div style="color:var(--muted);font-size:8px">Veloc+ Crit+</div>
+</div>
+</div>
+<button class="btn btn-success" onclick="doRegister()" style="font-size:14px;padding:10px">📝 CRIAR CONTA</button>
+</div>
+
+<p id="loginError" class="login-msg"></p>
+<p class="login-hint">Dados guardados entre sessoes!<br>Conta nova com espada + tunica.</p>
+</div>
+</div>
+
+<div id="gameUI" class="container hidden">
+<div class="header">
+<h1>⚔️ AETHERMOOR MMO</h1>
+<p id="headerInfo">Carregando...</p>
+</div>
+
+<div class="grid">
+<div class="panel">
+<h3>📊 Status</h3>
+<div class="stat-row"><span>❤️ HP</span><span id="hpText">100/100</span></div>
+<div class="stat-bar-bg"><div id="hpBar" class="stat-bar-fill hp-fill" style="width:100%"></div></div>
+<div class="stat-row"><span>💧 Mana</span><span id="manaText">50/50</span></div>
+<div class="stat-bar-bg"><div id="manaBar" class="stat-bar-fill mana-fill" style="width:100%"></div></div>
+<div class="stat-row"><span>⭐ XP</span><span id="xpText">0/100</span></div>
+<div class="stat-bar-bg"><div id="xpBar" class="stat-bar-fill xp-fill" style="width:0%"></div></div>
+<div class="stat-row"><span>🛡️ Defesa</span><span id="defText">0</span></div>
+<div class="stat-row"><span>⚔️ Dano</span><span id="dmgText">0</span></div>
+<div class="stat-row"><span>⚡ Velocidade</span><span id="spdText">0</span></div>
+<div class="stat-row"><span>💰 Ouro</span><span id="goldText">50</span></div>
+<div class="stat-row"><span>⚔️ Kills</span><span id="killsText">0</span></div>
+<div class="stat-row"><span>💀 Deaths</span><span id="deathsText">0</span></div>
+<br>
+<h3>🎒 Inventário</h3>
+<div id="inventoryGrid" class="inventory-grid"></div>
+<br>
+<h3>🏦 Banco</h3>
+<div id="bankGrid" class="inventory-grid"></div>
+<button class="btn btn-gold" onclick="depositAll()">📥 Depositar Tudo</button>
+<button class="btn btn-gold" onclick="withdrawAll()">📤 Retirar Tudo</button>
+</div>
+
+<div class="panel">
+<h3>📜 Log</h3>
+<div id="gameLog" class="log"></div>
+
+<!-- CHAT -->
+<h3>💬 Chat Global</h3>
+<div class="chat-box">
+<div id="chatMessages" class="chat-messages"></div>
+<div class="chat-input">
+<input type="text" id="chatInput" placeholder="Escreva uma mensagem..." maxlength="200">
+<button onclick="sendChat()">Enviar</button>
+</div>
+</div>
+
+<h3>🗺️ Mapa (7x7)</h3>
+<div id="miniMap" class="mini-map"></div>
+<p id="zoneInfo" style="text-align:center;margin:5px 0;font-size:11px"><span class="zone-badge zone-safe">🏦 BANCO - Seguro</span></p>
+<br>
+<h3>👥 Jogadores Próximos</h3>
+<div id="nearbyPlayers"></div>
+<br>
+<h3>📦 Itens no Chão</h3>
+<div id="groundItems"></div>
+</div>
+
+<div class="panel">
+<h3>⚔️ Ações</h3>
+<button class="btn btn-success" onclick="rest()" id="btnRest">😴 Descansar</button>
+<button class="btn btn-danger" onclick="leaveGame()">🚪 Sair</button>
+<br>
+<h3>📈 Ranking</h3>
+<div id="ranking" style="font-size:10px"></div>
+<br>
+<h3>💎 Raridades</h3>
+<div style="font-size:10px">
+<span class="rarity-common">● Comum</span><br>
+<span class="rarity-rare">● Raro</span><br>
+<span class="rarity-epic">● Épico</span><br>
+<span class="rarity-legendary">● Lendário</span>
+</div>
+</div>
+</div>
+</div>
+
+<div id="respawnScreen" class="respawn-screen">
+<h1>💀 VOCÊ MORREU!</h1>
+<p>Você foi derrotado e perdeu TODOS os seus itens.</p>
+<div id="droppedItems" class="dropped-items"></div>
+<button class="btn btn-success" onclick="respawn()" style="width:200px;font-size:14px">🔄 Ressurgir no Banco</button>
+</div>
+
+<div id="kickScreen" class="kick-screen">
+<h1>🚫 SESSÃO ENCERRADA</h1>
+<p id="kickReason">Você foi desconectado porque outra sessão foi iniciada no mesmo dispositivo.</p>
+<button class="btn btn-success" onclick="location.reload()" style="width:200px;font-size:14px">🔄 Recarregar</button>
+</div>
+
+<div id="combatOverlay" class="combat-overlay">
+<div class="combat-box">
+<h3>⚔️ COMBATE!</h3>
+<p id="combatTargetName" style="color:var(--accent);font-size:14px;margin:0"></p>
+<div id="combatLog" class="combat-log"></div>
+</div>
+</div>
 
 <script>
-const ITEMS = {
-  espada_madeira: { name: 'Espada Madeira', icon: '\uD83D\uDDE1', slot: 'weapon', dmg: 3, def: 0, tier: 'common' },
-  tunica: { name: 'Tunica', icon: '\uD83D\uDC55', slot: 'armor', dmg: 0, def: 2, tier: 'common' },
-  botas_velhas: { name: 'Botas Velhas', icon: '\uD83D\uDC62', slot: 'boots', dmg: 0, def: 1, tier: 'common' },
-  pocao_vida: { name: 'Pocao Vida', icon: '\uD83E\uDDEA', slot: 'consumable', heal: 30, tier: 'common' },
-  pocao_mana: { name: 'Pocao Mana', icon: '\uD83D\uDCA7', slot: 'consumable', mana: 30, tier: 'common' },
-  espada_ferro: { name: 'Espada Ferro', icon: '\u2694', slot: 'weapon', dmg: 6, def: 0, tier: 'rare' },
-  couro: { name: 'Couro', icon: '\uD83D\uDEE1', slot: 'armor', dmg: 0, def: 4, tier: 'rare' },
-  adaga: { name: 'Adaga', icon: '\uD83D\uDDE1', slot: 'weapon', dmg: 5, def: 0, tier: 'rare' },
-  anel_forca: { name: 'Anel Forca', icon: '\uD83D\uDC8D', slot: 'ring', dmg: 2, def: 1, tier: 'rare' },
-  pocao_grande: { name: 'Pocao Grande', icon: '\uD83E\uDDEA', slot: 'consumable', heal: 60, tier: 'rare' },
-  espada_aco: { name: 'Espada Aco', icon: '\uD83D\uDDE1', slot: 'weapon', dmg: 10, def: 0, tier: 'epic' },
-  cota_malha: { name: 'Cota Malha', icon: '\u26D3', slot: 'armor', dmg: 0, def: 7, tier: 'epic' },
-  machado: { name: 'Machado', icon: '\uD83E\uDE93', slot: 'weapon', dmg: 12, def: 0, tier: 'epic' },
-  amuleto: { name: 'Amuleto', icon: '\uD83D\uDCFF', slot: 'neck', dmg: 3, def: 3, tier: 'epic' },
-  botas_rapidas: { name: 'Botas Rapidas', icon: '\uD83D\uDC62', slot: 'boots', dmg: 0, def: 3, tier: 'epic' },
-  espada_fogo: { name: 'Espada de Fogo', icon: '\uD83D\uDD25', slot: 'weapon', dmg: 20, def: 0, tier: 'legendary' },
-  placas_dragao: { name: 'Placas Dragao', icon: '\uD83D\uDC09', slot: 'armor', dmg: 0, def: 15, tier: 'legendary' },
-  anel_rei: { name: 'Anel do Rei', icon: '\uD83D\uDC51', slot: 'ring', dmg: 5, def: 5, tier: 'legendary' },
-  machado_gigante: { name: 'Machado Gigante', icon: '\uD83E\uDE93', slot: 'weapon', dmg: 25, def: 0, tier: 'legendary' },
-  capa_invisivel: { name: 'Capa Invisivel', icon: '\uD83E\uDD93', slot: 'cloak', dmg: 0, def: 10, tier: 'legendary' }
+var socket = null;
+var player = null;
+var selectedClass = 'warrior';
+var inCombat = false;
+var MAP_SIZE = 7;
+
+var ITEMS = {
+  espada_madeira:{name:'Espada Madeira',type:'weapon',dmg:3,def:0,icon:'🗡️',rarity:1},
+  tunica:{name:'Túnica',type:'armor',dmg:0,def:2,icon:'👕',rarity:1},
+  botas_velhas:{name:'Botas Velhas',type:'accessory',dmg:0,def:1,icon:'👢',rarity:1},
+  pocao_vida:{name:'Poção Vida',type:'consumable',heal:30,icon:'🧪',rarity:1},
+  pocao_mana:{name:'Poção Mana',type:'consumable',mana:30,icon:'💧',rarity:1},
+  espada_ferro:{name:'Espada Ferro',type:'weapon',dmg:8,def:0,icon:'⚔️',rarity:2},
+  couro:{name:'Couro',type:'armor',dmg:0,def:5,icon:'🛡️',rarity:2},
+  adaga:{name:'Adaga',type:'weapon',dmg:10,def:0,icon:'🗡️',rarity:2},
+  anel:{name:'Anel Força',type:'accessory',dmg:5,def:0,icon:'💍',rarity:2},
+  pocao_grande:{name:'Poção Grande',type:'consumable',heal:60,icon:'🧪',rarity:2},
+  espada_aco:{name:'Espada Aço',type:'weapon',dmg:15,def:0,icon:'🗡️',rarity:3},
+  cota:{name:'Cota Malha',type:'armor',dmg:0,def:10,icon:'⛓️',rarity:3},
+  machado:{name:'Machado',type:'weapon',dmg:20,def:0,icon:'🪓',rarity:3},
+  amuleto:{name:'Amuleto',type:'accessory',dmg:2,def:2,icon:'📿',rarity:3},
+  botas_rapidas:{name:'Botas Rápidas',type:'accessory',dmg:0,def:3,icon:'👢',rarity:3},
+  espada_fogo:{name:'Espada de Fogo',type:'weapon',dmg:35,def:5,icon:'🔥',rarity:4},
+  placas:{name:'Placas Dragão',type:'armor',dmg:5,def:25,icon:'🐉',rarity:4},
+  anel_rei:{name:'Anel do Rei',type:'accessory',dmg:15,def:10,icon:'👑',rarity:4},
+  machado_gigante:{name:'Machado Gigante',type:'weapon',dmg:40,def:0,icon:'🪓',rarity:4},
+  capa_invisivel:{name:'Capa Invisível',type:'accessory',dmg:8,def:8,icon:'🧥',rarity:4}
 };
 
-const TIER_COLORS = { common: '#888', rare: '#4488ff', epic: '#aa44ff', legendary: '#ffaa00' };
-const CLASS_NAMES = { warrior: 'Guerreiro', mage: 'Mago', rogue: 'Ladino' };
+var RARITY_COLORS = {1:'#8b949e',2:'#58a6ff',3:'#a371f7',4:'#e3b341'};
+var RARITY_NAMES = {1:'Comum',2:'Raro',3:'Épico',4:'Lendário'};
 
-let socket, player = null, tiles = [], otherPlayers = {}, selectedTarget = null;
-
-function connectSocket() {
-  socket = io(window.location.host, { transports: ['polling', 'websocket'] });
-
-  socket.on('connect', () => {
-    document.getElementById('connStatus').innerHTML = '<span class="conn-ok">Online</span>';
-  });
-  socket.on('disconnect', () => {
-    document.getElementById('connStatus').innerHTML = '<span class="conn-err">Desconectado</span>';
-  });
-  socket.on('kicked', (msg) => { alert(msg); logout(); });
-  socket.on('loginFailed', (msg) => { document.getElementById('loginMsg').textContent = msg; });
-  socket.on('registerSuccess', (msg) => {
-    document.getElementById('loginMsg').style.color = '#44ff44';
-    document.getElementById('loginMsg').textContent = msg;
-  });
-  socket.on('registerFailed', (msg) => { document.getElementById('loginMsg').textContent = msg; });
-
-  socket.on('playerCreated', (p) => {
-    player = p;
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('gameScreen').style.display = 'block';
-    updateUI();
-    log('Entraste no mundo de Aethermoor!');
-  });
-
-  socket.on('mapUpdate', (data) => {
-    tiles = data.tiles;
-    otherPlayers = {};
-    for (const op of data.players) { if (op.id !== (player && player.id)) otherPlayers[op.id] = op; }
-    renderMap();
-  });
-
-  socket.on('playerJoined', (p) => { otherPlayers[p.id] = p; renderMap(); });
-  socket.on('playerLeft', (id) => { delete otherPlayers[id]; renderMap(); });
-
-  socket.on('playerMoved', (data) => {
-    if (otherPlayers[data.id]) { otherPlayers[data.id].x = data.x; otherPlayers[data.id].y = data.y; }
-    renderMap();
-  });
-
-  socket.on('playerUpdated', (p) => {
-    if (player && p.id === player.id) { player = p; updateUI(); }
-    else if (otherPlayers[p.id]) { otherPlayers[p.id] = p; renderMap(); }
-  });
-
-  socket.on('playerDied', (data) => {
-    log(data.killer + ' matou alguem!');
-    if (player && data.id === player.id) {
-      log('MORRESTE! Perdeste tudo e ressurgiste no banco.');
-      selectedTarget = null;
-      document.getElementById('btnAttack').style.display = 'none';
-    }
-    renderMap();
-  });
-
-  socket.on('playerRespawned', (p) => {
-    if (player && p.id === player.id) { player = p; updateUI(); renderMap(); }
-  });
-
-  socket.on('lootSpawned', (data) => {
-    const tile = tiles.find(t => t.x === data.x && t.y === data.y);
-    if (tile) tile.items = data.items;
-    renderMap(); renderLoot();
-  });
-
-  socket.on('combatLog', (msg) => log(msg));
-
-  socket.on('damagePopup', (data) => { showDamagePopup(data.x, data.y, data.dmg, data.color); });
-
-  socket.on('chatMessage', (data) => {
-    const chatBox = document.getElementById('chatBox');
-    const div = document.createElement('div');
-    div.className = 'chat-msg';
-    if (data.isSystem) {
-      div.innerHTML = '<span class="chat-sys">' + escapeHtml(data.from) + ':</span> ' + escapeHtml(data.text);
-    } else {
-      div.innerHTML = '<span class="chat-level">[Lv.' + (data.level || '?') + ']</span> <span class="chat-name" style="color:' + data.color + '">' + escapeHtml(data.from) + ':</span> ' + escapeHtml(data.text);
-    }
-    chatBox.appendChild(div);
-    chatBox.scrollTop = chatBox.scrollHeight;
-  });
+function selectClass(el){
+  document.querySelectorAll('.class-option').forEach(function(c){c.classList.remove('selected');});
+  el.classList.add('selected');
+  selectedClass=el.dataset.class;
 }
 
-connectSocket();
-
-function doLogin() {
-  const user = document.getElementById('loginUser').value.trim();
-  const pass = document.getElementById('loginPass').value;
-  document.getElementById('loginMsg').textContent = '';
-  document.getElementById('loginMsg').style.color = '#ff4444';
-  if (!user || !pass) { document.getElementById('loginMsg').textContent = 'Preencha todos os campos'; return; }
-  socket.emit('login', { username: user, password: pass });
+function switchTab(tab){
+  document.getElementById('tabLogin').classList.toggle('active', tab==='login');
+  document.getElementById('tabRegister').classList.toggle('active', tab==='register');
+  document.getElementById('loginForm').classList.toggle('hidden', tab!=='login');
+  document.getElementById('registerForm').classList.toggle('hidden', tab!=='register');
+  document.getElementById('loginError').textContent='';
 }
 
-function doRegister() {
-  const user = document.getElementById('loginUser').value.trim();
-  const pass = document.getElementById('loginPass').value;
-  document.getElementById('loginMsg').textContent = '';
-  document.getElementById('loginMsg').style.color = '#ff4444';
-  if (!user || !pass) { document.getElementById('loginMsg').textContent = 'Preencha todos os campos'; return; }
-  socket.emit('register', { username: user, password: pass });
+function log(msg,type){
+  type = type || 'system';
+  var d=document.getElementById('gameLog');
+  var e=document.createElement('div');
+  e.className='log-entry log-'+type;
+  var time = new Date();
+  var timeStr = ('0'+time.getHours()).slice(-2)+':'+('0'+time.getMinutes()).slice(-2);
+  e.textContent='['+timeStr+'] '+msg;
+  d.appendChild(e);
+  d.scrollTop=d.scrollHeight;
 }
 
-function logout() {
-  if (socket) socket.disconnect();
-  player = null; tiles = []; otherPlayers = {}; selectedTarget = null;
-  document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('gameScreen').style.display = 'none';
-  document.getElementById('loginUser').value = '';
-  document.getElementById('loginPass').value = '';
-  document.getElementById('loginMsg').textContent = '';
-  connectSocket();
+function setStatus(status,msg){
+  var el=document.getElementById('connectionStatus');
+  el.className='connection-status status-'+status;
+  el.textContent=msg;
 }
 
-function safeNum(v, def) { return (v !== undefined && v !== null && !isNaN(v)) ? v : (def !== undefined ? def : 0); }
-
-function updateUI() {
-  if (!player) return;
-  document.getElementById('pName').textContent = player.name || '---';
-  document.getElementById('pClass').textContent = CLASS_NAMES[player.class] || player.class || '---';
-  document.getElementById('pLevel').textContent = safeNum(player.level, 1);
-  document.getElementById('pHpText').textContent = safeNum(player.hp, 100) + '/' + safeNum(player.maxHp, 100);
-  document.getElementById('pHpBar').style.width = (safeNum(player.maxHp, 100) > 0 ? (safeNum(player.hp, 100) / safeNum(player.maxHp, 100) * 100) : 0) + '%';
-  document.getElementById('pManaText').textContent = safeNum(player.mana, 50) + '/' + safeNum(player.maxMana, 50);
-  document.getElementById('pManaBar').style.width = (safeNum(player.maxMana, 50) > 0 ? (safeNum(player.mana, 50) / safeNum(player.maxMana, 50) * 100) : 0) + '%';
-  document.getElementById('pXpText').textContent = safeNum(player.xp, 0) + '/' + safeNum(player.maxXp, 100);
-  document.getElementById('pXpBar').style.width = (safeNum(player.maxXp, 100) > 0 ? (safeNum(player.xp, 0) / safeNum(player.maxXp, 100) * 100) : 0) + '%';
-  document.getElementById('pGold').textContent = safeNum(player.gold, 0);
-  document.getElementById('pKills').textContent = safeNum(player.kills, 0);
-  document.getElementById('pDeaths').textContent = safeNum(player.deaths, 0);
-
-  let dmg = 0, def = 0;
-  for (const slot in (player.eq || {})) {
-    const itemId = player.eq[slot];
-    if (itemId && ITEMS[itemId]) { dmg += ITEMS[itemId].dmg || 0; def += ITEMS[itemId].def || 0; }
-  }
-  document.getElementById('pDmg').textContent = dmg;
-  document.getElementById('pDef').textContent = def;
-
-  renderInventory();
-  renderEquipped();
-  renderBank();
-  renderLoot();
-
-  const inBank = player.x >= 2 && player.x <= 4 && player.y >= 2 && player.y <= 4;
-  document.getElementById('btnRest').style.display = inBank ? 'inline-block' : 'none';
-  document.getElementById('btnBank').style.display = inBank ? 'inline-block' : 'none';
-  if (!inBank) document.getElementById('bankPanel').style.display = 'none';
-}
-
-// ============================================================
-// RENDER MAP - FIX DO MOVIMENTO
-// ============================================================
-function renderMap() {
-  if (!player) return;
-  const grid = document.getElementById('mapGrid');
-  grid.innerHTML = '';
-  const MAP_SIZE = 7;
-  const BANK_CENTER = 3;
-
-  for (let y = 0; y < MAP_SIZE; y++) {
-    for (let x = 0; x < MAP_SIZE; x++) {
-      const tile = document.createElement('div');
-      const isBank = x >= BANK_CENTER - 1 && x <= BANK_CENTER + 1 && y >= BANK_CENTER - 1 && y <= BANK_CENTER + 1;
-      tile.className = 'tile ' + (isBank ? 'tile-bank' : 'tile-pvp');
-
-      const tileData = tiles.find(t => t.x === x && t.y === y);
-      const playersHere = Object.values(otherPlayers).filter(p => p.x === x && p.y === y);
-      const isMe = player.x === x && player.y === y;
-
-      // Conteudo base do tile (icone do ambiente)
-      let content = '';
-      if (isMe) content += '\uD83D\uDC64';
-      else if (isBank) content += '\uD83C\uDFE6';
-      else content += '\u2694';
-
-      const contentDiv = document.createElement('div');
-      contentDiv.className = 'tile-content';
-      contentDiv.textContent = content;
-      tile.appendChild(contentDiv);
-
-      // Coordenadas
-      const coords = document.createElement('span');
-      coords.className = 'tile-coords';
-      coords.textContent = x + ',' + y;
-      tile.appendChild(coords);
-
-      // Loot badge
-      if (tileData && tileData.items && tileData.items.length > 0) {
-        const lc = document.createElement('span');
-        lc.className = 'tile-loot';
-        lc.textContent = tileData.items.length;
-        tile.appendChild(lc);
-      }
-
-      // Jogadores no tile - icone clicavel separado
-      if (playersHere.length > 0 && !isMe) {
-        const pc = document.createElement('span');
-        pc.className = 'tile-players';
-        pc.textContent = playersHere.length;
-        tile.appendChild(pc);
-
-        // Icone do jogador como elemento separado clicavel
-        const playerIcon = document.createElement('div');
-        playerIcon.className = 'tile-player-icon';
-        playerIcon.textContent = '\uD83D\uDC65';
-        playerIcon.title = playersHere.map(p => p.name + ' (Lv.' + (p.level || 1) + ')').join(', ');
-        playerIcon.onclick = function(e) {
-          e.stopPropagation(); // Impedir que o clique chegue ao tile
-          selectedTarget = playersHere[0].id;
-          document.getElementById('btnAttack').style.display = 'inline-block';
-          document.getElementById('btnAttack').textContent = 'Atacar ' + playersHere[0].name;
-          log('Alvo: ' + playersHere[0].name + ' (Lv.' + (playersHere[0].level || 1) + ')');
-        };
-        tile.appendChild(playerIcon);
-      }
-
-      // CLICK NO TILE = MOVER (sempre funciona, exceto no proprio tile)
-      if (!isMe) {
-        tile.onclick = function() {
-          const dx = Math.abs(x - player.x);
-          const dy = Math.abs(y - player.y);
-          if (dx + dy === 1) {
-            socket.emit('move', { x: x, y: y });
-            log('Movendo para ' + x + ',' + y);
-          } else {
-            log('Muito longe! So podes mover 1 tile.');
-          }
-        };
-      }
-
-      grid.appendChild(tile);
-    }
-  }
-}
-
-function renderInventory() {
-  const grid = document.getElementById('invGrid');
-  grid.innerHTML = '';
-  if (!player || !player.inv) return;
-
-  for (let i = 0; i < 16; i++) {
-    const slot = document.createElement('div');
-    slot.className = 'inv-slot';
-    const item = player.inv[i];
-
-    if (item && item.id && ITEMS[item.id]) {
-      const data = ITEMS[item.id];
-      slot.innerHTML = data.icon;
-      slot.style.borderColor = TIER_COLORS[data.tier] || '#333';
-
-      let isEquipped = false;
-      for (const eqSlot in (player.eq || {})) {
-        if (player.eq[eqSlot] === item.id) isEquipped = true;
-      }
-      if (isEquipped) slot.classList.add('equipped');
-
-      if (item.qty > 1) {
-        const qty = document.createElement('span');
-        qty.className = 'qty';
-        qty.textContent = item.qty;
-        slot.appendChild(qty);
-      }
-
-      slot.onmouseenter = (e) => showTooltip(e, data, item);
-      slot.onmouseleave = hideTooltip;
-
-      slot.onclick = function() {
-        if (data.slot === 'consumable') { socket.emit('useItem', i); }
-        else if (data.slot && data.slot !== 'consumable') { socket.emit('equip', i); }
-      };
-      slot.oncontextmenu = function(e) { e.preventDefault(); socket.emit('bankDeposit', i); };
-    }
-
-    grid.appendChild(slot);
-  }
-}
-
-function renderEquipped() {
-  const grid = document.getElementById('eqGrid');
-  grid.innerHTML = '';
-  if (!player || !player.eq) return;
-
-  const slots = [
-    { key: 'weapon', label: 'Arma' },
-    { key: 'armor', label: 'Armadura' },
-    { key: 'boots', label: 'Botas' },
-    { key: 'ring', label: 'Anel' },
-    { key: 'neck', label: 'Amuleto' },
-    { key: 'cloak', label: 'Capa' }
-  ];
-
-  for (const s of slots) {
-    const slot = document.createElement('div');
-    slot.className = 'eq-slot';
-    const itemId = player.eq[s.key];
-
-    const label = document.createElement('span');
-    label.className = 'eq-label';
-    label.textContent = s.label;
-    slot.appendChild(label);
-
-    if (itemId && ITEMS[itemId]) {
-      const data = ITEMS[itemId];
-      slot.innerHTML += data.icon;
-      slot.style.borderColor = TIER_COLORS[data.tier] || '#444';
-      slot.onmouseenter = (e) => showTooltip(e, data, { id: itemId });
-      slot.onmouseleave = hideTooltip;
-      slot.onclick = function() { socket.emit('unequip', s.key); };
-    }
-
-    grid.appendChild(slot);
-  }
-}
-
-function renderBank() {
-  const grid = document.getElementById('bankGrid');
-  grid.innerHTML = '';
-  if (!player || !player.bank) return;
-
-  for (let i = 0; i < Math.max(player.bank.length, 16); i++) {
-    const slot = document.createElement('div');
-    slot.className = 'bank-slot';
-    const item = player.bank[i];
-
-    if (item && item.id && ITEMS[item.id]) {
-      const data = ITEMS[item.id];
-      slot.innerHTML = data.icon;
-      slot.style.borderColor = TIER_COLORS[data.tier] || '#2a3a2a';
-      if (item.qty > 1) {
-        const qty = document.createElement('span');
-        qty.className = 'qty';
-        qty.textContent = item.qty;
-        slot.appendChild(qty);
-      }
-      slot.onmouseenter = (e) => showTooltip(e, data, item);
-      slot.onmouseleave = hideTooltip;
-      slot.onclick = function() { socket.emit('bankWithdraw', i); };
-    }
-
-    grid.appendChild(slot);
-  }
-}
-
-function renderLoot() {
-  const list = document.getElementById('lootList');
-  if (!player) return;
-  const tile = tiles.find(t => t.x === player.x && t.y === player.y);
-  if (!tile || !tile.items || tile.items.length === 0) {
-    list.innerHTML = '<span style="color:#555;">Nada aqui...</span>';
-    return;
-  }
-  let html = '';
-  for (let i = 0; i < tile.items.length; i++) {
-    const item = tile.items[i];
-    if (item && item.id && ITEMS[item.id]) {
-      const data = ITEMS[item.id];
-      html += '<div style="display:flex;align-items:center;gap:6px;margin:3px 0;cursor:pointer;" onclick="socket.emit(\'pickup\',' + i + ')">';
-      html += '<span style="font-size:1.2em;">' + data.icon + '</span>';
-      html += '<span style="color:' + (TIER_COLORS[data.tier] || '#888') + '">' + data.name + '</span>';
-      if (item.qty > 1) html += '<span style="color:#888;font-size:0.8em;">x' + item.qty + '</span>';
-      html += '</div>';
-    }
-  }
-  list.innerHTML = html || '<span style="color:#555;">Nada aqui...</span>';
-}
-
-function attackTarget() {
-  if (!selectedTarget) return;
-  socket.emit('attack', selectedTarget);
-}
-
-function rest() {
-  socket.emit('rest');
-}
-
-function toggleBank() {
-  const panel = document.getElementById('bankPanel');
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-}
-
-function sendChat() {
-  const input = document.getElementById('chatInput');
-  const msg = input.value.trim();
-  if (msg) { socket.emit('chat', msg); input.value = ''; }
-}
-
-function log(msg) {
-  const logEl = document.getElementById('combatLog');
-  const div = document.createElement('div');
-  div.textContent = msg;
-  logEl.appendChild(div);
-  logEl.scrollTop = logEl.scrollHeight;
-  if (logEl.children.length > 50) logEl.removeChild(logEl.firstChild);
-}
-
-function showDamagePopup(x, y, dmg, color) {
-  const grid = document.getElementById('mapGrid');
-  const tiles = grid.children;
-  if (!tiles[y * 7 + x]) return;
-  const rect = tiles[y * 7 + x].getBoundingClientRect();
-  const popup = document.createElement('div');
-  popup.className = 'damage-popup';
-  popup.textContent = '-' + dmg;
-  popup.style.left = (rect.left + rect.width / 2) + 'px';
-  popup.style.top = (rect.top) + 'px';
-  popup.style.color = color || '#ff4444';
-  document.body.appendChild(popup);
-  setTimeout(() => popup.remove(), 1000);
-}
-
-function showTooltip(e, data, item) {
-  const tt = document.getElementById('tooltip');
-  let html = '<div class="tt-name" style="color:' + (TIER_COLORS[data.tier] || '#fff') + '">' + data.name + '</div>';
-  html += '<div class="tt-stat">' + (data.dmg ? 'Dano: ' + data.dmg : '') + (data.def ? ' Defesa: ' + data.def : '') + '</div>';
-  if (data.heal) html += '<div class="tt-stat">Cura: ' + data.heal + ' HP</div>';
-  if (data.mana) html += '<div class="tt-stat">Recupera: ' + data.mana + ' Mana</div>';
-  tt.innerHTML = html;
-  tt.style.display = 'block';
-  tt.style.left = (e.clientX + 15) + 'px';
-  tt.style.top = (e.clientY + 15) + 'px';
-}
-
-function hideTooltip() {
-  document.getElementById('tooltip').style.display = 'none';
+// CHAT
+function addChatMessage(data) {
+  var chatDiv = document.getElementById('chatMessages');
+  var msg = document.createElement('div');
+  msg.className = 'chat-msg';
+  var clsColor = data.cls === 'warrior' ? 'chat-warrior' : data.cls === 'mage' ? 'chat-mage' : 'chat-rogue';
+  msg.innerHTML = '<span class="chat-lvl">[Lv.'+data.lvl+']</span> <span class="'+clsColor+' chat-name">'+escapeHtml(data.name)+':</span> ' + escapeHtml(data.message);
+  chatDiv.appendChild(msg);
+  chatDiv.scrollTop = chatDiv.scrollHeight;
 }
 
 function escapeHtml(text) {
-  const div = document.createElement('div');
+  var div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
+
+function sendChat() {
+  var input = document.getElementById('chatInput');
+  var msg = input.value.trim();
+  if(!msg || !socket) return;
+  socket.emit('chat', { message: msg });
+  input.value = '';
+}
+
+function initSocket(){
+  setStatus('connecting','🟡 Conectando...');
+
+  var script=document.createElement('script');
+  script.src='https://cdn.socket.io/4.7.2/socket.io.min.js';
+  script.onload=function(){
+    var SERVER_URL=window.location.protocol+'//'+window.location.host;
+    socket=io(SERVER_URL,{
+      transports:['polling','websocket'],
+      reconnection:true,
+      reconnectionAttempts:10,
+      reconnectionDelay:1000,
+      timeout:20000
+    });
+
+    socket.on('connect',function(){
+      setStatus('online','🟢 Online');
+      log('Conectado ao servidor!','system');
+    });
+
+    socket.on('disconnect',function(){
+      setStatus('offline','🔴 Offline');
+      log('Desconectado do servidor.','system');
+    });
+
+    socket.on('connect_error',function(err){
+      setStatus('connecting','🟡 Reconectando...');
+      log('Erro de conexão. Tentando novamente...','system');
+    });
+
+    socket.on('kicked',function(data){
+      document.getElementById('loginModal').classList.remove('active');
+      document.getElementById('gameUI').classList.add('hidden');
+      document.getElementById('kickScreen').classList.add('active');
+      if(data && data.reason){
+        document.getElementById('kickReason').textContent = data.reason;
+      }
+    });
+
+    // ===== LOGIN/REGISTER RESPONSES =====
+    socket.on('loginFailed', function(msg){
+      document.getElementById('loginError').textContent = msg;
+    });
+    socket.on('registerSuccess', function(msg){
+      document.getElementById('loginError').style.color = '#3fb950';
+      document.getElementById('loginError').textContent = msg;
+      setTimeout(function(){ switchTab('login'); document.getElementById('loginError').style.color=''; document.getElementById('loginError').textContent=''; }, 1500);
+    });
+    socket.on('registerFailed', function(msg){
+      document.getElementById('loginError').textContent = msg;
+    });
+
+    socket.on('chatMessage', function(data){
+      addChatMessage(data);
+    });
+
+    socket.on('playerCreated',function(data){
+      player = data.player;
+      if(!player.inv) player.inv = [];
+      if(!player.eq) player.eq = {weapon:null,armor:null,accessory:null};
+      if(!player.bank) player.bank = [];
+      if(!player.xp && player.xp !== 0) player.xp = 0;
+      if(!player.xpNext) player.xpNext = 100;
+      if(!player.mana && player.mana !== 0) player.mana = player.manaMax || 50;
+      if(!player.gold && player.gold !== 0) player.gold = 50;
+      if(!player.kills && player.kills !== 0) player.kills = 0;
+      if(!player.deaths && player.deaths !== 0) player.deaths = 0;
+      if(!player.pos) player.pos = {x:3,y:3};
+
+      document.getElementById('loginModal').classList.remove('active');
+      document.getElementById('gameUI').classList.remove('hidden');
+
+      updateUI();
+      renderMap();
+      renderInventory();
+      renderBank();
+
+      log('Bem-vindo a Aethermoor, '+player.name+'!','info');
+      log('Mapa 7x7! Explore, encontre loot raro e lute!','info');
+
+      if(data.groundItems){
+        renderGround(data.groundItems);
+      }
+    });
+
+    socket.on('nearbyPlayers',function(list){ renderNearby(list); });
+    socket.on('groundItems',function(items){ renderGround(items); });
+    socket.on('groundItemsUpdated',function(items){ renderGround(items); });
+
+    socket.on('inventoryUpdated',function(inv){
+      if(player) player.inv = inv;
+      renderInventory();
+    });
+
+    socket.on('equipmentUpdated',function(data){
+      if(player){
+        player.eq = data.eq;
+        player.inv = data.inv;
+      }
+      renderInventory();
+      updateUI();
+    });
+
+    socket.on('bankUpdated',function(data){
+      if(player){
+        player.bank = data.bank;
+        player.inv = data.inv;
+      }
+      renderBank();
+      renderInventory();
+    });
+
+    socket.on('moved',function(data){
+      if(!player) return;
+      player.pos = data.pos;
+      updateUI();
+      renderMap();
+      if(data.isBank){
+        log('Você entrou na Zona do Banco (seguro).','info');
+      }else{
+        log('Você entrou na ZONA PvP! Cuidado!','pvp');
+      }
+    });
+
+    socket.on('combatStarted',function(data){
+      inCombat = true;
+      document.getElementById('combatOverlay').classList.add('active');
+      document.getElementById('combatTargetName').textContent='Vs. '+data.target.name;
+      document.getElementById('combatLog').innerHTML='';
+      log('Combate iniciado contra '+data.target.name+'!','combat');
+    });
+
+    socket.on('combatLog',function(data){
+      var cl=document.getElementById('combatLog');
+      var e=document.createElement('div');
+      if(data.type==='attack'){
+        e.innerHTML='<span style="color:#3fb950">Você atacou '+data.defender+' por '+data.dmg+(data.crit?' 💥CRIT!':'')+'</span>';
+      }else{
+        e.innerHTML='<span style="color:#f85149">'+data.attacker+' atacou você por '+data.dmg+(data.crit?' 💥CRIT!':'')+'</span>';
+      }
+      cl.appendChild(e);
+      cl.scrollTop=cl.scrollHeight;
+    });
+
+    socket.on('combatWon',function(data){
+      inCombat = false;
+      document.getElementById('combatOverlay').classList.remove('active');
+      log('Você venceu! +'+data.xp+' XP, +'+data.gold+' ouro.','win');
+      if(data.drops && data.drops.length){
+        var dropMsg = 'Itens dropados: ';
+        data.drops.forEach(function(d){
+          var r = d.rarity || 1;
+          var color = RARITY_COLORS[r] || '#8b949e';
+          dropMsg += '<span style="color:'+color+'">'+d.icon+' '+d.name+'</span> ';
+        });
+        log(dropMsg, 'loot');
+      }
+    });
+
+    socket.on('died',function(data){
+      inCombat = false;
+      document.getElementById('combatOverlay').classList.remove('active');
+      document.getElementById('gameUI').classList.add('hidden');
+      document.getElementById('respawnScreen').classList.add('active');
+
+      var dropsHtml = '<strong>Itens perdidos:</strong><br>';
+      if(data.drops && data.drops.length){
+        data.drops.forEach(function(d){
+          var r = d.rarity || 1;
+          var color = RARITY_COLORS[r] || '#8b949e';
+          dropsHtml += '<span style="color:'+color+'">'+d.icon+' '+d.name+'</span> ';
+        });
+      }
+      document.getElementById('droppedItems').innerHTML = dropsHtml;
+      log('Você foi derrotado por '+data.killer+'! Perdeu tudo!','death');
+    });
+
+    socket.on('respawned',function(data){
+      if(!player) return;
+      player.hp = data.hp;
+      player.mana = data.mana;
+      player.pos = data.pos;
+      player.inCombat = false;
+      document.getElementById('respawnScreen').classList.remove('active');
+      document.getElementById('gameUI').classList.remove('hidden');
+      updateUI();
+      renderMap();
+      log('Você ressurgiu no Banco.','info');
+    });
+
+    socket.on('rested',function(data){
+      if(!player) return;
+      player.hp = data.hp;
+      player.mana = data.mana;
+      updateUI();
+      log('Você descansou. HP e Mana recuperados.','info');
+    });
+
+    socket.on('healed',function(data){
+      if(!player) return;
+      player.hp = data.hp;
+      updateUI();
+      log('Você usou uma poção. +'+data.amount+' HP.','info');
+    });
+
+    socket.on('manaRestored',function(data){
+      if(!player) return;
+      player.mana = data.mana;
+      updateUI();
+      log('Mana restaurada. +'+data.amount+' Mana.','info');
+    });
+
+    socket.on('levelUp',function(data){
+      log('🎉 LEVEL UP! Você alcançou o nível '+data.lvl+'!','win');
+    });
+
+    socket.on('error',function(msg){
+      log('Erro: '+msg,'system');
+    });
+
+    socket.on('playerJoined',function(data){
+      log(data.name+' ('+data.cls+') entrou no mundo.','info');
+    });
+
+    socket.on('playerLeft',function(data){
+      log('Um jogador saiu do mundo.','system');
+    });
+
+    socket.on('playerDied',function(data){
+      log(data.name+' foi morto por '+data.killer+'! '+data.drops+' itens caíram no chão.','death');
+    });
+  };
+
+  script.onerror=function(){
+    setStatus('offline','🔴 Falha ao carregar Socket.IO');
+    document.getElementById('loginError').style.display='block';
+    document.getElementById('loginError').textContent='Erro: Não foi possível carregar o cliente Socket.IO. Tente recarregar a página.';
+  };
+
+  document.head.appendChild(script);
+}
+
+// ===== LOGIN / REGISTER =====
+function doLogin(){
+  var user = document.getElementById('loginUser').value.trim();
+  var pass = document.getElementById('loginPass').value;
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('loginError').style.color = '';
+  if(!user || !pass){ document.getElementById('loginError').textContent = 'Preencha todos os campos'; return; }
+  if(!socket || !socket.connected){
+    document.getElementById('loginError').textContent = 'Ainda conectando... Aguarde.';
+    return;
+  }
+  socket.emit('login', { username: user, password: pass });
+}
+
+function doRegister(){
+  var user = document.getElementById('regUser').value.trim();
+  var pass = document.getElementById('regPass').value;
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('loginError').style.color = '';
+  if(!user || !pass){ document.getElementById('loginError').textContent = 'Preencha todos os campos'; return; }
+  if(user.length < 3 || user.length > 16){ document.getElementById('loginError').textContent = 'Username: 3-16 caracteres'; return; }
+  if(pass.length < 4){ document.getElementById('loginError').textContent = 'Password mínimo 4 caracteres'; return; }
+  if(!socket || !socket.connected){
+    document.getElementById('loginError').textContent = 'Ainda conectando... Aguarde.';
+    return;
+  }
+  socket.emit('register', { username: user, password: pass, cls: selectedClass });
+}
+
+function safeNum(val, def){
+  def = def || 0;
+  if(val === undefined || val === null || isNaN(val)) return def;
+  return val;
+}
+
+function updateUI(){
+  if(!player) return;
+  player.hp = safeNum(player.hp, 100);
+  player.hpMax = safeNum(player.hpMax, 100);
+  player.mana = safeNum(player.mana, 50);
+  player.manaMax = safeNum(player.manaMax, 50);
+  player.xp = safeNum(player.xp, 0);
+  player.xpNext = safeNum(player.xpNext, 100);
+  player.gold = safeNum(player.gold, 50);
+  player.kills = safeNum(player.kills, 0);
+  player.deaths = safeNum(player.deaths, 0);
+  player.lvl = safeNum(player.lvl, 1);
+
+  document.getElementById('headerInfo').innerHTML=player.name+' | Nível '+player.lvl+' | Pos: ('+player.pos.x+','+player.pos.y+')';
+  document.getElementById('hpText').textContent=player.hp+'/'+player.hpMax;
+  document.getElementById('hpBar').style.width=Math.max(0,Math.min(100,(player.hp/player.hpMax*100)))+'%';
+  document.getElementById('manaText').textContent=player.mana+'/'+player.manaMax;
+  document.getElementById('manaBar').style.width=Math.max(0,Math.min(100,(player.mana/player.manaMax*100)))+'%';
+  document.getElementById('xpText').textContent=player.xp+'/'+player.xpNext;
+  document.getElementById('xpBar').style.width=Math.max(0,Math.min(100,(player.xp/player.xpNext*100)))+'%';
+
+  var dmg=0,def=0,spd=0;
+  if(player.cls==='warrior'){dmg=12;def=8;spd=8;}
+  else if(player.cls==='mage'){dmg=18;def=3;spd=10;}
+  else if(player.cls==='rogue'){dmg=15;def=4;spd=16;}
+  if(player.eq && player.eq.weapon && ITEMS[player.eq.weapon]) dmg += ITEMS[player.eq.weapon].dmg || 0;
+  if(player.eq && player.eq.armor && ITEMS[player.eq.armor]) def += ITEMS[player.eq.armor].def || 0;
+  if(player.eq && player.eq.accessory && ITEMS[player.eq.accessory]){dmg += ITEMS[player.eq.accessory].dmg || 0; def += ITEMS[player.eq.accessory].def || 0;}
+  document.getElementById('dmgText').textContent=dmg;
+  document.getElementById('defText').textContent=def;
+  document.getElementById('spdText').textContent=spd;
+  document.getElementById('goldText').textContent=player.gold;
+  document.getElementById('killsText').textContent=player.kills;
+  document.getElementById('deathsText').textContent=player.deaths;
+
+  var isBank=(player.pos.x>=2&&player.pos.x<=4&&player.pos.y>=2&&player.pos.y<=4);
+  document.getElementById('zoneInfo').innerHTML=isBank?
+    '<span class="zone-badge zone-safe">🏦 BANCO - Seguro</span>':
+    '<span class="zone-badge zone-pvp">⚔️ ZONA PvP - Perigoso!</span>';
+  document.getElementById('btnRest').disabled=!isBank;
+}
+
+function renderInventory(){
+  var g=document.getElementById('inventoryGrid');
+  g.innerHTML='';
+
+  if(!player || !player.inv){
+    for(var i=0;i<16;i++){
+      var slot=document.createElement('div');
+      slot.className='inv-slot';
+      g.appendChild(slot);
+    }
+    return;
+  }
+
+  for(var i=0;i<16;i++){
+    var slot=document.createElement('div');
+    slot.className='inv-slot';
+    var item=player.inv[i];
+
+    if(item && item.id && ITEMS[item.id]){
+      var itemData = ITEMS[item.id];
+      var qty = safeNum(item.qty, 1);
+      var rarity = itemData.rarity || 1;
+      var rarityColor = RARITY_COLORS[rarity] || '#8b949e';
+
+      slot.innerHTML = itemData.icon + '<span class="qty">' + qty + '</span>';
+      slot.style.borderColor = rarityColor;
+
+      var tt=document.createElement('div');
+      tt.className='item-tooltip';
+      tt.innerHTML = '<span style="color:'+rarityColor+'">'+itemData.name+'</span><br><span style="color:var(--muted)">'+RARITY_NAMES[rarity]+'</span>';
+      if(itemData.dmg) tt.innerHTML += '<br>⚔️ Dano: '+itemData.dmg;
+      if(itemData.def) tt.innerHTML += '<br>🛡️ Defesa: '+itemData.def;
+      if(itemData.heal) tt.innerHTML += '<br>❤️ Cura: '+itemData.heal;
+      if(itemData.mana) tt.innerHTML += '<br>💧 Mana: '+itemData.mana;
+      slot.appendChild(tt);
+
+      var isEquipped = false;
+      if(player.eq){
+        if(player.eq.weapon === item.id) isEquipped = true;
+        if(player.eq.armor === item.id) isEquipped = true;
+        if(player.eq.accessory === item.id) isEquipped = true;
+      }
+      if(isEquipped) slot.classList.add('equipped');
+
+      (function(idx){
+        slot.onclick=function(){
+          if(socket) socket.emit('equip',{index:idx});
+        };
+      })(i);
+    }
+
+    g.appendChild(slot);
+  }
+}
+
+function renderBank(){
+  var g=document.getElementById('bankGrid');
+  g.innerHTML='';
+  if(!player || !player.bank){
+    for(var i=0;i<16;i++){
+      var slot=document.createElement('div');
+      slot.className='inv-slot';
+      g.appendChild(slot);
+    }
+    return;
+  }
+  for(var i=0;i<16;i++){
+    var slot=document.createElement('div');
+    slot.className='inv-slot';
+    var item=player.bank[i];
+    if(item && item.id && ITEMS[item.id]){
+      var itemData = ITEMS[item.id];
+      var qty = safeNum(item.qty, 1);
+      var rarity = itemData.rarity || 1;
+      var rarityColor = RARITY_COLORS[rarity] || '#8b949e';
+      slot.innerHTML=itemData.icon+'<span class="qty">'+qty+'</span>';
+      slot.style.borderColor = rarityColor;
+      var tt=document.createElement('div');
+      tt.className='item-tooltip';
+      tt.innerHTML = '<span style="color:'+rarityColor+'">'+itemData.name+'</span><br><span style="color:var(--muted)">'+RARITY_NAMES[rarity]+'</span>';
+      slot.appendChild(tt);
+      (function(idx){
+        slot.onclick=function(){if(socket)socket.emit('withdraw',{index:idx});};
+      })(i);
+    }
+    g.appendChild(slot);
+  }
+}
+
+// ===== RENDER MAP - FIX DO MOVIMENTO =====
+function renderMap(){
+  var g=document.getElementById('miniMap');
+  g.innerHTML='';
+  for(var y=0;y<MAP_SIZE;y++){
+    for(var x=0;x<MAP_SIZE;x++){
+      var cell=document.createElement('div');
+      cell.className='map-cell';
+      var isBankCell=(x>=2&&x<=4&&y>=2&&y<=4);
+      cell.classList.add(isBankCell?'safe':'pvp');
+      cell.textContent=isBankCell?'🏦':'⚔️';
+
+      // Jogador atual
+      if(player && player.pos && player.pos.x===x && player.pos.y===y){
+        cell.classList.add('current');
+        cell.textContent='👤';
+      }
+
+      // CLICK = MOVER (sempre funciona no tile inteiro)
+      (function(cx,cy){
+        cell.onclick=function(e){
+          if(!player || inCombat){log('Não pode mover em combate!','system');return;}
+          if(!player.pos){log('Erro: posição desconhecida','system');return;}
+          var dx=Math.abs(cx-player.pos.x);
+          var dy=Math.abs(cy-player.pos.y);
+          if(dx+dy===1){
+            if(socket) socket.emit('move',{x:cx,y:cy});
+          }else{
+            log('Só pode mover para tiles adjacentes!','system');
+          }
+        };
+      })(x,y);
+
+      g.appendChild(cell);
+    }
+  }
+}
+
+function renderNearby(list){
+  var g=document.getElementById('nearbyPlayers');
+  g.innerHTML='';
+  if(!list || !list.length){
+    g.innerHTML='<p style="color:var(--muted);font-size:10px;text-align:center">Nenhum jogador por perto.</p>';
+    return;
+  }
+  list.forEach(function(p){
+    var el=document.createElement('div');
+    el.className='player-entry';
+    var hpMax = safeNum(p.hpMax, 100);
+    var hp = safeNum(p.hp, hpMax);
+    var hpPct=Math.floor((hp/hpMax)*100);
+    el.innerHTML='<div><span class="name">'+p.name+'</span> <span class="lvl">Lv.'+safeNum(p.lvl,1)+'</span></div>'+
+      '<div class="hp-bar"><div class="hp-bar-inner" style="width:'+hpPct+'%"></div></div>';
+    if(!inCombat && socket){
+      var btn=document.createElement('button');
+      btn.className='btn btn-danger';
+      btn.style='width:auto;padding:2px 6px;font-size:9px;margin:0';
+      btn.textContent='⚔️ Atacar';
+      (function(tid){btn.onclick=function(e){e.stopPropagation(); socket.emit('attack',{targetId:tid});};})(p.id);
+      el.appendChild(btn);
+    }
+    g.appendChild(el);
+  });
+}
+
+function renderGround(items){
+  var g=document.getElementById('groundItems');
+  g.innerHTML='';
+  if(!items || !items.length){
+    g.innerHTML='<p style="color:var(--muted);font-size:10px;text-align:center">Nenhum item no chão.</p>';
+    return;
+  }
+  items.forEach(function(item,idx){
+    var el=document.createElement('div');
+    el.className='ground-item';
+    var itemData = ITEMS[item.id];
+    var itemName = itemData ? itemData.name : item.id;
+    var itemIcon = itemData ? itemData.icon : '📦';
+    var rarity = itemData ? (itemData.rarity || 1) : 1;
+    var rarityColor = RARITY_COLORS[rarity] || '#8b949e';
+
+    el.innerHTML='<span style="color:'+rarityColor+'">'+itemIcon+' '+itemName+' x'+safeNum(item.qty,1)+'</span>';
+    var btn=document.createElement('button');
+    btn.textContent='Pegar';
+    (function(i){btn.onclick=function(){if(socket)socket.emit('pickup',{index:i});};})(idx);
+    el.appendChild(btn);
+    g.appendChild(el);
+  });
+}
+
+function rest(){if(socket)socket.emit('rest');}
+function depositAll(){if(socket)socket.emit('depositAll');}
+function withdrawAll(){if(socket)socket.emit('withdrawAll');}
+function respawn(){if(socket)socket.emit('respawn');}
+function leaveGame(){location.reload();}
+
+window.onload=function(){
+  initSocket();
+  document.getElementById('loginUser').focus();
+  document.getElementById('loginUser').addEventListener('keypress',function(e){
+    if(e.key==='Enter') document.getElementById('loginPass').focus();
+  });
+  document.getElementById('loginPass').addEventListener('keypress',function(e){
+    if(e.key==='Enter') doLogin();
+  });
+  document.getElementById('regUser').addEventListener('keypress',function(e){
+    if(e.key==='Enter') document.getElementById('regPass').focus();
+  });
+  document.getElementById('regPass').addEventListener('keypress',function(e){
+    if(e.key==='Enter') doRegister();
+  });
+  document.getElementById('chatInput').addEventListener('keypress',function(e){
+    if(e.key==='Enter') sendChat();
+  });
+};
 </script>
 </body>
 </html>
