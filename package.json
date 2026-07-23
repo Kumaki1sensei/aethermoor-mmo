@@ -1,13 +1,1 @@
-{
-  "name": "aethermoor-mmo",
-  "version": "11.0.0",
-  "description": "Aethermoor MMO - Login & Save System",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.7.2"
-  }
-}
+{"name":"aethermoor-mmo-server","version":"1.0.0","main":"server.js","scripts":{"start":"node server.js"},"dependencies":{"express":"^4.18.2","socket.io":"^4.7.2"}}
